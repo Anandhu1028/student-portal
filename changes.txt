@@ -1,0 +1,1 @@
+Move Index file from public to root

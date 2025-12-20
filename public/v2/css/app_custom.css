@@ -1,0 +1,21 @@
+#offcanvasCustom {
+   width: 90% !important;
+}
+
+
+.ui-datepicker {
+   z-index: 9999 !important;
+}
+
+/* Fix select dropdowns if needed */
+.ui-datepicker select.ui-datepicker-month,
+.ui-datepicker select.ui-datepicker-year {
+   z-index: 2001 !important;
+   position: relative;
+}
+
+
+.required_field::after {
+   content: " *";
+   color: red;
+}

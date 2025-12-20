@@ -1,0 +1,17 @@
+.loader-container{
+	position: fixed!important;
+	height: 100%;
+	width: 100%;
+	text-align: center;
+	z-index: 9999;
+	margin:0 auto;
+	display: none;
+}
+
+.shadow_loader{
+	width: 50px;
+	-webkit-box-shadow: 1px 1px 3px 0px rgba(44,43,43, 0.3);
+  	-moz-box-shadow: 1px 1px 3px 0px rgba(44,43,43, 0.3);
+  	box-shadow: 1px 1px 3px 0px rgba(44,43,43, 0.3);
+  	border:1px solid rgba(44,43,43,0.4);
+}

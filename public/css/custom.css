@@ -1,0 +1,12 @@
+.error-outline {
+    border: 1px solid red !important;
+    padding: 5px;
+}
+
+
+
+#alertModal .modal-body {
+    border: 1px solid #d4edda;
+    /* Light green border */
+    border-radius: 0.25rem;
+}
