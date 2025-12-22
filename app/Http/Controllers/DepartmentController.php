@@ -2,19 +2,17 @@
 
 namespace App\Http\Controllers;
 
-use Illuminate\Http\Request;
 use App\Models\Departments;
+use Illuminate\Http\Request;
 
 class DepartmentController extends Controller
 {
-    // PAGE LOAD (AJAX via sidebar)
     public function index()
     {
         $departments = Departments::orderBy('id', 'desc')->get();
         return view('departments.index', compact('departments'));
     }
 
-    // LOAD FORM (OFFCANVAS)
     public function manage(Request $request)
     {
         $department = null;
@@ -26,35 +24,40 @@ class DepartmentController extends Controller
         return view('departments.manage', compact('department'));
     }
 
-    // SAVE (CREATE / UPDATE)
     public function save(Request $request)
     {
-        $request->validate([
-            'name' => 'required|unique:departments,name,' . $request->id,
+        $data = $request->validate([
+            'name'        => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'color'       => 'required|string',
+            'status'      => 'required|boolean',
         ]);
 
         Departments::updateOrCreate(
             ['id' => $request->id],
-            [
-                'name' => $request->name,
-                'description' => $request->description,
-            ]
+            $data
         );
 
         return response()->json([
-            'status' => true,
-            'message' => 'Department saved successfully'
+            'status'  => true,
+            'title'   => 'Department Saved',
+            'message' => 'Department details saved successfully.'
         ]);
     }
 
-    // DELETE
-    public function delete(Request $request)
+
+   public function delete(Request $request)
     {
-        Departments::findOrFail($request->id)->delete();
+        $request->validate([
+            'id' => 'required|exists:departments,id'
+        ]);
+
+        Departments::where('id', $request->id)->delete();
 
         return response()->json([
-            'status' => true,
+            'success' => true,
             'message' => 'Department deleted successfully'
         ]);
     }
+
 }

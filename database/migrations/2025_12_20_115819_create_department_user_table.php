@@ -14,13 +14,12 @@ class CreateDepartmentUserTable extends Migration
     public function up()
     {
         Schema::create('department_user', function (Blueprint $table) {
-             $table->id();
-             $table->foreignId('department_id')->constrained('departments')->cascadeOnDelete();
-             $table->foreignId('user_id')->constrained('users')->cascadeOnDelete();
-             $table->timestamps();
+            $table->foreignId('department_id')->constrained()->cascadeOnDelete();
+            $table->foreignId('user_id')->constrained()->cascadeOnDelete();
+            $table->timestamps();
 
-             $table->unique(['department_id', 'user_id']);
-        });
+            $table->unique(['department_id','user_id']);
+         });
     }
 
     /**
@@ -30,6 +29,6 @@ class CreateDepartmentUserTable extends Migration
      */
     public function down()
     {
-        Schema::dropIfExists('department_user'):
+        Schema::dropIfExists('department_user');
     }
 }
