@@ -12,6 +12,7 @@ use App\Http\Controllers\MenuController;
 use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TaxRatesController;
+use App\Http\Controllers\TaskController;
 use App\Models\Students;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
@@ -108,6 +109,19 @@ Route::middleware(['auth', 'verified', 'check_url_access'])->group(function () {
    Route::post('/delete_department', [DepartmentController::class, 'delete'])->name('departments.delete');
 
    Route::get('/reset_core', [HomeController::class, 'reset_core'])->name('reset_core');
+
+
+
+    /*
+    |--------------------------------------------------------------------------
+    | TASK MANAGEMENT
+    |--------------------------------------------------------------------------
+    */
+    Route::get('/tasks', [TaskController::class, 'index']) ->name('tasks.index');
+    Route::get('/tasks/list', [TaskController::class, 'list']) ->name('tasks.list');
+    Route::get('/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
+    Route::post('/tasks/store', [TaskController::class, 'store'])->name('tasks.store');
+    Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
 });
 
 Route::post('/load_cities', [LocationController::class, 'load_cities'])->name('load_cities');

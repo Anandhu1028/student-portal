@@ -20,6 +20,8 @@
     <link rel="stylesheet" href="{{ asset('/css/jquery-ui.min.css') }}">
     <link rel="stylesheet" href="{{ asset('/css/ajax_loader.css') }}">
 
+    <link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet">
+
 
 </head>
 
@@ -113,6 +115,7 @@
     <script src="{{ asset('js/bootstrap.bundle.min.js') }}"></script>
     <script src="{{ asset('js/bootstrap-select.min.js') }}"></script>
     <script src="{{ asset('js/adminlte.js?v=3.2.0') }}"></script>
+    <script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 
     <script>
         $(document).ready(function() {

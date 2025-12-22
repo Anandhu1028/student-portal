@@ -15,6 +15,7 @@
                 <tr>
                     <th>Name</th>
                     <th style="width: 40%">Description</th>
+                    <th>Assigned Users</th>
                     <th>Color</th>
                     <th>Status</th>
                     <th width="160">Action</th>
@@ -32,6 +33,22 @@
                     </td>
 
                     <td>{{ $dept->description }}</td>
+                 <td>
+                    @if($dept->users->count())
+                        @php
+                            $names = $dept->users->pluck('name')->implode(', ');
+                        @endphp
+
+                        <div class="assigned-users-wrap">
+                            <span class="assigned-users-text">
+                                {{ $names }}
+                            </span>
+                        </div>
+                    @else
+                        <i class="text-secondary">No users selected</i>
+                    @endif
+                </td>
+
 
                     <td>
                         <span style="
@@ -44,20 +61,24 @@
                         "></span>
                     </td>
 
-                    <td>
+                    <td class="text-center">
                         @if($dept->status)
-                            <span class="badge bg-success">Active</span>
+                            <i class="fa fa-toggle-on text-success toggleDeptStatus"
+                            style="font-size:18px; cursor:pointer;"
+                            data-id="{{ $dept->id }}"
+                            data-status="1"></i>
                         @else
-                            <span class="badge bg-danger">Inactive</span>
+                            <i class="fa fa-toggle-off text-danger toggleDeptStatus"
+                            style="font-size:18px; cursor:pointer;"
+                            data-id="{{ $dept->id }}"
+                            data-status="0"></i>
                         @endif
                     </td>
 
+
                     <td>
                         <div class="d-flex gap-2">
-                            <button class="btn btn-sm btn-info editDept"
-                                    data-id="{{ $dept->id }}">
-                                Edit
-                            </button>
+                            
 
                             <button class="btn btn-sm btn-danger deleteDept"
                                     data-id="{{ $dept->id }}">
@@ -71,6 +92,35 @@
         </table>
     </div>
 </div>
+<style>
+.assigned-users-wrap {
+    max-width: 220px;          /* adjust for your table */
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+    cursor: pointer;
+}
+
+.assigned-users-text {
+    display: inline-block;
+    max-width: 100%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    transition: all 0.35s ease;
+}
+
+/* ON HOVER — EXPAND */
+.assigned-users-wrap:hover {
+    max-width: 1000px;        /* large enough to fit all names */
+    white-space: normal;
+}
+
+.assigned-users-wrap:hover .assigned-users-text {
+    overflow: visible;
+    text-overflow: unset;
+}
+</style>
+
 
 <script>
 $(document).ready(function () {
@@ -169,6 +219,63 @@ $(document).off('click', '#deptDeleteOk').on('click', '#deptDeleteOk', function 
     $('#modal_custom').modal('hide');
     loadMenuPage("{{ route('departments.index') }}", "Manage Departments");
 });
+
+
+
+
+$(document).off('click', '.toggleDeptStatus')
+.on('click', '.toggleDeptStatus', function () {
+
+    const el = $(this);
+    const id = el.data('id');
+
+    if (!confirm('Are you sure you want to change department status?')) {
+        return;
+    }
+
+    preloader.load();
+
+    $.post("{{ route('departments.save') }}", {
+        _token: "{{ csrf_token() }}",
+        id: id,
+        toggle_status: true
+    })
+    .done(function (res) {
+
+        preloader.stop();
+
+        // Toggle icon visually
+        if (res.status === 1) {
+            el.removeClass('fa-toggle-off text-danger')
+              .addClass('fa-toggle-on text-success')
+              .data('status', 1);
+        } else {
+            el.removeClass('fa-toggle-on text-success')
+              .addClass('fa-toggle-off text-danger')
+              .data('status', 0);
+        }
+
+        showAlert('Department status updated');
+    })
+    .fail(function () {
+        preloader.stop();
+        showAlert('Failed to update status', 'error');
+    });
+});
+
+
+
+document.addEventListener('DOMContentLoaded', function () {
+    const tooltipTriggerList = [].slice.call(
+        document.querySelectorAll('[data-bs-toggle="tooltip"]')
+    );
+
+    tooltipTriggerList.forEach(function (el) {
+        new bootstrap.Tooltip(el);
+    });
+});
+
+
 </script>
 @endsection
 

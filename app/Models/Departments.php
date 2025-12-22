@@ -15,6 +15,11 @@ class Departments extends Model
 
     public function users()
     {
-        return $this->belongsToMany(User::class, 'department_user');
+        return $this->belongsToMany(
+            User::class,
+            'department_user',
+            'department_id', // ✅ FIXED
+            'user_id'        // ✅ FIXED
+        );
     }
 }

@@ -106,9 +106,15 @@ class User extends Authenticatable implements MustVerifyEmail
       return $this->belongsTo(Branches::class);
    }
 
-   public function departments()
-   {
-      return $this->belongsToMany(Departments::class, 'department_user');
-   }
+  public function departments()
+    {
+        return $this->belongsToMany(
+            Departments::class,
+            'department_user',
+            'user_id',        // ✅ FIXED
+            'department_id'   // ✅ FIXED
+        );
+    }
+
 
 }
