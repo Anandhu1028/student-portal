@@ -77,29 +77,32 @@ function loadTasks(page = 1) {
         page: page
     }, function (html) {
         $('#taskTable').html(html);
+        // initialize bootstrap tooltips in newly injected content
+        document.querySelectorAll('#taskTable [data-bs-toggle="tooltip"]').forEach(function (el) {
+            try { new bootstrap.Tooltip(el); } catch (e) { /* ignore */ }
+        });
     });
 }
 
-$('.taskFilter').on('change', loadTasks);
-$('.taskSearch').on('keyup', loadTasks);
+// Use delegated events per project JS rules
+$(document).on('change', '.taskFilter', loadTasks);
+$(document).on('keyup', '.taskSearch', loadTasks);
 
-$('#resetFilters').on('click', function () {
+$(document).on('click', '#resetFilters', function () {
     $('.taskFilter').val('');
     $('.taskSearch').val('');
     loadTasks();
 });
 
 /* ================= CREATE TASK (GLOBAL OFFCANVAS) ================= */
-$('#openCreateTask').on('click', function (e) {
+// open offcanvas create — delegated
+$(document).on('click', '#openCreateTask', function (e) {
     e.preventDefault();
 
     preloader.load();
 
-    $.ajax({
-        url: "{{ route('tasks.create') }}",
-        type: "GET",
-        success: function (response) {
-
+    $.get("{{ route('tasks.create') }}")
+        .done(function (response) {
             preloader.stop();
 
             const offcanvasEl = document.getElementById('offcanvasCustom');
@@ -110,12 +113,11 @@ $('#openCreateTask').on('click', function (e) {
 
             bsOffcanvas.show();
             $('.selectpicker').selectpicker();
-        },
-        error: function () {
+        })
+        .fail(function () {
             preloader.stop();
             showAlert('Unable to load Create Task form', 'error');
-        }
-    });
+        });
 });
 
 /* ================= SAVE TASK ================= */

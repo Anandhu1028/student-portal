@@ -8,6 +8,8 @@ use App\Models\{
     TaskPriority,
     TaskRelation,
     TaskActivity,
+    TaskSubTask,
+    TaskActivityAttachment,
     User
 };
 use Illuminate\Http\Request;
@@ -127,7 +129,9 @@ class TaskController extends Controller
             'priority',
             'owner',
             'assignees',
-            'activities.user'
+            'subTasks.owner',
+            'activities.actor',
+            'activities.attachments'
         ]);
 
         return view('tasks.show', compact('task'));
@@ -140,10 +144,138 @@ class TaskController extends Controller
         'id' => 'required|exists:tasks,id'
     ]);
 
-    Task::where('id', $request->id)->delete();
+    $task = Task::withTrashed()->findOrFail($request->id);
+
+    DB::transaction(function () use ($task) {
+        // Create activity log
+        TaskActivity::create([
+            'task_id' => $task->id,
+            'actor_id' => auth()->id(),
+            'task_owner_id' => $task->task_owner_id,
+            'message' => 'Task deleted'
+        ]);
+
+        // Force delete to cascade foreign keys
+        $task->forceDelete();
+    });
 
     return response()->json(['success' => true]);
 }
+
+    /** SUB-TASKS */
+    public function storeSubTask(Request $request, Task $task)
+    {
+        $data = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'task_status_id' => 'nullable|exists:task_statuses,id',
+            'task_priority_id' => 'nullable|exists:task_priorities,id',
+            'task_owner_id' => 'nullable|exists:users,id',
+            'due_at' => 'nullable|date'
+        ]);
+
+        $sub = TaskSubTask::create(array_merge($data, ['task_id' => $task->id]));
+
+        TaskActivity::create([
+            'task_id' => $task->id,
+            'sub_task_id' => $sub->id,
+            'actor_id' => auth()->id(),
+            'task_owner_id' => $task->task_owner_id,
+            'message' => "Sub-task created: {$sub->title}"
+        ]);
+
+        return response()->json(['success' => true, 'subtask' => $sub]);
+    }
+
+    public function updateSubTask(Request $request, TaskSubTask $subtask)
+    {
+        $data = $request->validate([
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'task_status_id' => 'nullable|exists:task_statuses,id',
+            'task_priority_id' => 'nullable|exists:task_priorities,id',
+            'task_owner_id' => 'nullable|exists:users,id',
+            'due_at' => 'nullable|date'
+        ]);
+
+        $subtask->update($data);
+
+        TaskActivity::create([
+            'task_id' => $subtask->task_id,
+            'sub_task_id' => $subtask->id,
+            'actor_id' => auth()->id(),
+            'task_owner_id' => $subtask->task_owner_id,
+            'message' => "Sub-task updated: {$subtask->title}"
+        ]);
+
+        return response()->json(['success' => true, 'subtask' => $subtask]);
+    }
+
+    public function editSubTask(TaskSubTask $subtask)
+    {
+        return view('tasks.partials.edit_sub_task', compact('subtask'));
+    }
+
+    public function changeSubTaskStatus(Request $request, TaskSubTask $subtask)
+    {
+        $data = $request->validate([
+            'task_status_id' => 'required|exists:task_statuses,id'
+        ]);
+
+        $from = $subtask->task_status_id;
+        $subtask->update(['task_status_id' => $data['task_status_id']]);
+
+        TaskActivity::create([
+            'task_id' => $subtask->task_id,
+            'sub_task_id' => $subtask->id,
+            'actor_id' => auth()->id(),
+            'task_owner_id' => $subtask->task_owner_id,
+            'from_status_id' => $from,
+            'to_status_id' => $data['task_status_id'],
+            'message' => "Sub-task status changed"
+        ]);
+
+        return response()->json(['success' => true]);
+    }
+
+    /** COMMENTS & ATTACHMENTS */
+    public function comment(Request $request, Task $task)
+    {
+        $data = $request->validate([
+            'message' => 'required|string'
+        ]);
+
+        $activity = TaskActivity::create([
+            'task_id' => $task->id,
+            'actor_id' => auth()->id(),
+            'task_owner_id' => $task->task_owner_id,
+            'message' => $data['message']
+        ]);
+
+        return response()->json(['success' => true, 'activity' => $activity]);
+    }
+
+    public function uploadAttachment(Request $request, Task $task)
+    {
+        $request->validate(['file' => 'required|file|max:10240']);
+
+        $file = $request->file('file');
+        $path = $file->store('task_attachments');
+
+        $activity = TaskActivity::create([
+            'task_id' => $task->id,
+            'actor_id' => auth()->id(),
+            'task_owner_id' => $task->task_owner_id,
+            'message' => 'Attachment uploaded'
+        ]);
+
+        TaskActivityAttachment::create([
+            'task_activity_id' => $activity->id,
+            'file_path' => $path
+        ]);
+
+        return response()->json(['success' => true, 'activity' => $activity]);
+    }
 
 
     

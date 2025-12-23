@@ -18,10 +18,18 @@
     <td>{{ $task->priority->name }}</td>
     <td>{{ $task->owner->name }}</td>
     <td>
-        {{ $task->assignees->pluck('name')->take(2)->join(', ') }}
-        @if($task->assignees->count() > 2)
-            …
-        @endif
+        @php $names = $task->assignees->pluck('name')->toArray(); @endphp
+        <span class="assigned-users" data-bs-toggle="tooltip" data-bs-placement="top" title="{{ implode(', ', $names) }}">
+            {{ collect($names)->take(2)->join(', ') }}
+            @if(count($names) > 2)
+                …
+            @endif
+        </span>
+        <script>
+            // Initialize tooltip for the first matching element on initial render
+            const el = document.querySelector('.assigned-users');
+            if (el) new bootstrap.Tooltip(el);
+        </script>
     </td>
     <td>{{ optional($task->due_at)->format('d M Y') }}</td>
     <td class="text-nowrap">
@@ -107,22 +115,49 @@ $(document).on('click', '.deleteTask', function () {
     const taskId = $(this).data('id');
     if (!taskId) return;
 
-    if (!confirm('Are you sure you want to delete this task?')) return;
+        // Show bootstrap modal confirmation
+        const modalHtml = `
+        <div class="modal fade" id="taskDeleteConfirm" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Confirm Delete</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">Are you sure you want to delete this task?</div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-sm btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="button" class="btn btn-sm btn-danger" id="confirmDeleteTaskBtn">Delete</button>
+                    </div>
+                </div>
+            </div>
+        </div>`;
 
-    preloader.load();
+        $('body').append(modalHtml);
+        const $modal = $('#taskDeleteConfirm');
+        const bs = new bootstrap.Modal($modal[0]);
+        bs.show();
 
-    $.post("{{ route('tasks.delete') }}", {
-        _token: "{{ csrf_token() }}",
-        id: taskId
-    })
-    .done(function () {
-        preloader.stop();
-        showAlert('Task deleted successfully');
-        loadTasks();
-    })
-    .fail(function () {
-        preloader.stop();
-        showAlert('Failed to delete task', 'error');
-    });
+        $(document).one('click', '#confirmDeleteTaskBtn', function () {
+                preloader.load();
+
+                $.post("{{ route('tasks.delete') }}", {
+                        _token: "{{ csrf_token() }}",
+                        id: taskId
+                })
+                .done(function () {
+                        preloader.stop();
+                        bs.hide();
+                        $modal.remove();
+                        showAlert('Task deleted successfully');
+                        loadTasks();
+                })
+                .fail(function () {
+                        preloader.stop();
+                        bs.hide();
+                        $modal.remove();
+                        showAlert('Failed to delete task', 'error');
+                });
+        });
 });
 </script>

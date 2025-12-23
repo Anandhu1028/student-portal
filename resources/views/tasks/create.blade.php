@@ -1,7 +1,7 @@
 @extends('layouts.layout_ajax')
 
 @section('content')
-<form method="POST" action="{{ route('tasks.store') }}">
+<form id="taskCreateForm" method="POST" action="{{ route('tasks.store') }}">
 @csrf
 
 <div class="card">
@@ -51,7 +51,7 @@
 
             <div class="col-12">
                 <label class="form-label">Assigned Users</label>
-                <select name="assignees[]" class="form-select form-select-sm" multiple>
+                <select name="assignees[]" class="form-select form-select-sm selectpicker" multiple data-live-search="true">
                     @foreach($users as $u)
                         <option value="{{ $u->id }}">{{ $u->name }}</option>
                     @endforeach
@@ -70,14 +70,11 @@
 </form>
 @endsection
 <script>
-$(document).on('click', '#saveTaskBtn', function () {
+// Submit create form (delegated)
+$(document).on('submit', '#taskCreateForm', function (e) {
+    e.preventDefault();
 
-    const form = $('#taskCreateForm');
-
-    if (!form.length) {
-        showAlert('Task form not loaded', 'error');
-        return;
-    }
+    const form = $(this);
 
     if (!form[0].checkValidity()) {
         form[0].reportValidity();
@@ -86,50 +83,22 @@ $(document).on('click', '#saveTaskBtn', function () {
 
     preloader.load();
 
-    $.ajax({
-        url: "{{ route('tasks.store') }}",
-        type: "POST",
-        data: form.serialize(),
-        success: function () {
-
+    $.post("{{ route('tasks.store') }}", form.serialize())
+        .done(function () {
             preloader.stop();
 
-            // Close offcanvas
-            const canvas = bootstrap.Offcanvas.getInstance(
-                document.getElementById('offcanvasCustom')
-            );
-            if (canvas) canvas.hide();
+            const offcanvas = bootstrap.Offcanvas.getInstance(document.getElementById('offcanvasCustom'));
+            if (offcanvas) offcanvas.hide();
 
-            // Clear footer (important)
             $('#offcanvasCustomFooter').html('');
-
-            // Reload task list
             loadTasks();
-
             showAlert('Task created successfully');
-        },
-        error: function (xhr) {
+        })
+        .fail(function (xhr) {
             preloader.stop();
-            showAlert(
-                xhr.responseJSON?.message || 'Failed to save task',
-                'error'
-            );
-        }
-    });
+            showAlert(xhr.responseJSON?.message || 'Failed to save task', 'error');
+        });
 });
 
-
-function loadTasks(page = 1) {
-    $.get("{{ route('tasks.list') }}", {
-        filter: 1,
-        status: $('[data-name="status"]').val(),
-        priority: $('[data-name="priority"]').val(),
-        owner: $('[data-name="owner"]').val(),
-        search: $('.taskSearch').val(),
-        page: page
-    }, function (html) {
-        $('#taskTable').html(html);
-    });
-}
-
+// helper moved to global script (list.blade uses it) — left as-is
 </script>
