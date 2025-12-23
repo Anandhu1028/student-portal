@@ -108,6 +108,9 @@ Route::middleware(['auth', 'verified', 'check_url_access'])->group(function () {
    Route::post('/save_department', [DepartmentController::class, 'save'])->name('departments.save');
    Route::post('/delete_department', [DepartmentController::class, 'delete'])->name('departments.delete');
 
+   Route::post('/department/user-toggle', [DepartmentController::class, 'toggleUser'])
+    ->name('departments.user.toggle');
+
    Route::get('/reset_core', [HomeController::class, 'reset_core'])->name('reset_core');
 
 
@@ -118,10 +121,11 @@ Route::middleware(['auth', 'verified', 'check_url_access'])->group(function () {
     |--------------------------------------------------------------------------
     */
     Route::get('/tasks', [TaskController::class, 'index']) ->name('tasks.index');
-    Route::get('/tasks/list', [TaskController::class, 'list']) ->name('tasks.list');
-    Route::get('/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
-    Route::post('/tasks/store', [TaskController::class, 'store'])->name('tasks.store');
-    Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
+    Route::get('/tasks/list', [TaskController::class, 'list'])->name('tasks.list');
+      Route::get('/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
+      Route::post('/tasks/store', [TaskController::class, 'store'])->name('tasks.store');
+      Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
+
 });
 
 Route::post('/load_cities', [LocationController::class, 'load_cities'])->name('load_cities');

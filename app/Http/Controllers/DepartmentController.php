@@ -14,7 +14,11 @@ class DepartmentController extends Controller
             ->orderBy('id', 'desc')
             ->get();
 
-        return view('departments.index', compact('departments'));
+        $users = User::where('is_active', 1)
+            ->orderBy('name')
+            ->get(['id', 'name']);
+
+        return view('departments.index', compact('departments', 'users'));
     }
 
     public function manage(Request $request)
@@ -25,31 +29,23 @@ class DepartmentController extends Controller
             $department = Departments::with('users:id')->findOrFail($request->id);
         }
 
-        // 🔥 GUARANTEE UNIQUE USERS
-        $users = User::query()
-            ->where('is_active', 1)
-            ->select('id', 'name')
-            ->groupBy('id', 'name')
+        $users = User::where('is_active', 1)
             ->orderBy('name')
-            ->get();
+            ->get(['id', 'name']);
 
         return view('departments.manage', compact('department', 'users'));
     }
 
     public function save(Request $request)
     {
-        // TOGGLE STATUS
         if ($request->has('toggle_status')) {
             $dept = Departments::findOrFail($request->id);
             $dept->status = !$dept->status;
             $dept->save();
 
-            return response()->json([
-                'status' => $dept->status ? 1 : 0
-            ]);
+            return response()->json(['status' => $dept->status ? 1 : 0]);
         }
 
-        // NORMAL SAVE
         $data = $request->validate([
             'name'        => 'required|string|max:255',
             'description' => 'nullable|string',
@@ -64,18 +60,9 @@ class DepartmentController extends Controller
             $data
         );
 
-        // 🔥 ALWAYS SYNC (EMPTY ARRAY REMOVES ALL)
-        $users = collect($request->input('users', []))
-            ->filter()
-            ->unique()
-            ->values()
-            ->toArray();
+        $department->users()->sync($request->input('users', []));
 
-        $department->users()->sync($users);
-
-        return response()->json([
-            'message' => 'Department saved successfully'
-        ]);
+        return response()->json(['message' => 'Department saved successfully']);
     }
 
     public function delete(Request $request)
@@ -91,4 +78,29 @@ class DepartmentController extends Controller
             'message' => 'Department deleted successfully'
         ]);
     }
+
+    public function toggleUser(Request $request)
+{
+    $request->validate([
+        'department_id' => 'required|exists:departments,id',
+        'attach'        => 'array',
+        'detach'        => 'array',
+        'attach.*'      => 'exists:users,id',
+        'detach.*'      => 'exists:users,id',
+    ]);
+
+    $dept = Departments::findOrFail($request->department_id);
+
+    if (!empty($request->attach)) {
+        $dept->users()->syncWithoutDetaching($request->attach);
+    }
+
+    if (!empty($request->detach)) {
+        $dept->users()->detach($request->detach);
+    }
+
+    return response()->json(['success' => true]);
+}
+
+
 }
