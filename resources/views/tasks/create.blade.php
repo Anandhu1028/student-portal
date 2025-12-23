@@ -69,3 +69,67 @@
 </div>
 </form>
 @endsection
+<script>
+$(document).on('click', '#saveTaskBtn', function () {
+
+    const form = $('#taskCreateForm');
+
+    if (!form.length) {
+        showAlert('Task form not loaded', 'error');
+        return;
+    }
+
+    if (!form[0].checkValidity()) {
+        form[0].reportValidity();
+        return;
+    }
+
+    preloader.load();
+
+    $.ajax({
+        url: "{{ route('tasks.store') }}",
+        type: "POST",
+        data: form.serialize(),
+        success: function () {
+
+            preloader.stop();
+
+            // Close offcanvas
+            const canvas = bootstrap.Offcanvas.getInstance(
+                document.getElementById('offcanvasCustom')
+            );
+            if (canvas) canvas.hide();
+
+            // Clear footer (important)
+            $('#offcanvasCustomFooter').html('');
+
+            // Reload task list
+            loadTasks();
+
+            showAlert('Task created successfully');
+        },
+        error: function (xhr) {
+            preloader.stop();
+            showAlert(
+                xhr.responseJSON?.message || 'Failed to save task',
+                'error'
+            );
+        }
+    });
+});
+
+
+function loadTasks(page = 1) {
+    $.get("{{ route('tasks.list') }}", {
+        filter: 1,
+        status: $('[data-name="status"]').val(),
+        priority: $('[data-name="priority"]').val(),
+        owner: $('[data-name="owner"]').val(),
+        search: $('.taskSearch').val(),
+        page: page
+    }, function (html) {
+        $('#taskTable').html(html);
+    });
+}
+
+</script>

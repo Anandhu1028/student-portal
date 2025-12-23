@@ -125,6 +125,9 @@ Route::middleware(['auth', 'verified', 'check_url_access'])->group(function () {
       Route::get('/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
       Route::post('/tasks/store', [TaskController::class, 'store'])->name('tasks.store');
       Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
+      Route::post('/tasks/delete', [TaskController::class, 'delete'])
+    ->name('tasks.delete');
+
 
 });
 

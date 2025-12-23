@@ -132,4 +132,19 @@ class TaskController extends Controller
 
         return view('tasks.show', compact('task'));
     }
+
+
+    public function delete(Request $request)
+{
+    $request->validate([
+        'id' => 'required|exists:tasks,id'
+    ]);
+
+    Task::where('id', $request->id)->delete();
+
+    return response()->json(['success' => true]);
+}
+
+
+    
 }

@@ -24,12 +24,20 @@
         @endif
     </td>
     <td>{{ optional($task->due_at)->format('d M Y') }}</td>
-    <td>
-        <a href="{{ route('tasks.show',$task) }}"
-           class="btn btn-sm btn-outline-primary">
-            View
-        </a>
-    </td>
+    <td class="text-nowrap">
+    <button
+        class="btn btn-sm btn-outline-primary openTaskView"
+        data-id="{{ $task->id }}">
+        View
+    </button>
+
+    <button
+        class="btn btn-sm btn-outline-danger deleteTask"
+        data-id="{{ $task->id }}">
+        Delete
+    </button>
+</td>
+
 </tr>
 @empty
 <tr>
@@ -40,3 +48,81 @@
 </table>
 
 {{ $tasks->links() }}
+<script>
+/* ================= EDIT TASK ================= */
+$(document).on('click', '.openTaskEdit', function () {
+
+    const taskId = $(this).data('id');
+    if (!taskId) return;
+
+    preloader.load();
+
+    $.get("{{ url('/tasks') }}/" + taskId, function (html) {
+
+        preloader.stop();
+
+        const offcanvasEl = document.getElementById('offcanvasCustom');
+        const oc = new bootstrap.Offcanvas(offcanvasEl);
+
+        $('#offcanvasCustomHead').html('Edit Task');
+        $('#offcanvasCustomBody').html(html);
+
+        oc.show();
+        $('.selectpicker').selectpicker();
+    }).fail(function () {
+        preloader.stop();
+        showAlert('Failed to load task', 'error');
+    });
+});
+/* ================= VIEW TASK ================= */
+$(document).on('click', '.openTaskView', function () {
+
+    const taskId = $(this).data('id');
+    if (!taskId) return;
+
+    preloader.load();
+
+    $.get("{{ url('/tasks') }}/" + taskId + "?view=1", function (html) {
+
+        preloader.stop();
+
+        const offcanvasEl = document.getElementById('offcanvasCustom');
+        const oc = new bootstrap.Offcanvas(offcanvasEl);
+
+        $('#offcanvasCustomHead').html('Task Details');
+        $('#offcanvasCustomBody').html(html);
+
+        oc.show();
+    }).fail(function () {
+        preloader.stop();
+        showAlert('Unable to load task', 'error');
+    });
+});
+
+
+
+/* ================= DELETE TASK ================= */
+$(document).on('click', '.deleteTask', function () {
+
+    const taskId = $(this).data('id');
+    if (!taskId) return;
+
+    if (!confirm('Are you sure you want to delete this task?')) return;
+
+    preloader.load();
+
+    $.post("{{ route('tasks.delete') }}", {
+        _token: "{{ csrf_token() }}",
+        id: taskId
+    })
+    .done(function () {
+        preloader.stop();
+        showAlert('Task deleted successfully');
+        loadTasks();
+    })
+    .fail(function () {
+        preloader.stop();
+        showAlert('Failed to delete task', 'error');
+    });
+});
+</script>
