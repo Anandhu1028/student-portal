@@ -1,30 +1,27 @@
 <div class="card mb-3">
-    <div class="card-header d-flex justify-content-between align-items-center">
-        <h6 class="mb-0">Sub-tasks</h6>
+    <div class="card-header d-flex justify-content-between">
+        <h6>Sub-tasks</h6>
         <button class="btn btn-sm btn-primary" id="openAddSubTask">Add</button>
     </div>
 
     <div class="card-body">
-        @if($task->subTasks->isEmpty())
-            <div class="text-center text-muted">No sub-tasks</div>
-        @else
-            <ul class="list-group">
-                @foreach($task->subTasks as $s)
-                    <li class="list-group-item d-flex justify-content-between align-items-center">
-                        <div>
-                            <strong>{{ $s->title }}</strong>
-                            <div class="small text-muted">{{ $s->owner->name ?? '—' }} • {{ $s->due_at?->format('d M Y') ?? '—' }}</div>
-                        </div>
-                        <div class="btn-group">
-                            <button class="btn btn-sm btn-outline-secondary editSubTask" data-id="{{ $s->id }}">Edit</button>
-                            <button class="btn btn-sm btn-outline-success changeSubTaskStatus" data-id="{{ $s->id }}">Status</button>
-                        </div>
-                    </li>
-                @endforeach
-            </ul>
-        @endif
+        <ul class="list-group" id="subTaskList">
+            @forelse($task->subTasks as $s)
+                <li class="list-group-item" id="subtask-{{ $s->id }}">
+                    <strong>{{ $s->title }}</strong>
+                    <div class="small text-muted">
+                        {{ $s->status->name ?? '—' }} •
+                        {{ $s->priority->name ?? '—' }} •
+                        {{ $s->due_at?->format('d M Y') ?? '—' }}
+                    </div>
+                </li>
+            @empty
+                <li class="text-muted text-center">No sub-tasks</li>
+            @endforelse
+        </ul>
     </div>
 </div>
+
 
 <script>
 // open add subtask offcanvas

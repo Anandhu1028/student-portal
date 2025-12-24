@@ -16,31 +16,43 @@ class CheckUrlAccess
     * @return \Illuminate\Http\Response|\Illuminate\Http\RedirectResponse
     */
   public function handle(Request $request, Closure $next)
-{
-    // ✅ Allow AJAX GET requests (UI fragments, offcanvas, filters)
-    if ($request->ajax() && $request->isMethod('get')) {
+    {
+        // ✅ ALWAYS allow AJAX requests (GET + POST)
+        if ($request->ajax()) {
+            return $next($request);
+        }
+
+        $user = auth()->user();
+        if (!$user) {
+            abort(401);
+        }
+
+        $currentRoute = $request->route()?->getName();
+
+        // Allow home
+        if ($currentRoute === 'home_page') {
+            return $next($request);
+        }
+
+        // Explicit user deny
+        $userDenied = AllowedUrls::where('user_id', $user->id)
+            ->where('url', $currentRoute)
+            ->where('allowed', false)
+            ->exists();
+
+        // Role permission
+        $isAllowed = AllowedUrls::where('role_id', $user->role_id)
+            ->where('url', $currentRoute)
+            ->where('allowed', true)
+            ->exists();
+
+        if ($userDenied || !$isAllowed) {
+            return response()->view('permissions.permission_denied', [], 403);
+        }
+
         return $next($request);
     }
 
-    
-    $currentRoute = $request->route()?->getName();
-    $user = auth()->user();
-
-    $userDenied = AllowedUrls::where('user_id', $user->id)
-        ->where('url', $currentRoute)
-        ->where('allowed', false)
-        ->exists();
-
-    $isUrlApproved = AllowedUrls::where('role_id', $user->role_id)
-        ->where('url', $currentRoute)
-        ->exists();
-
-    if (($userDenied || !$isUrlApproved) && $currentRoute !== 'home_page') {
-        return response()->view('permissions.permission_denied', [], 403);
-    }
-
-    return $next($request);
-}
 
    
    

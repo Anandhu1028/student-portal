@@ -134,7 +134,16 @@ Route::middleware(['auth', 'verified', 'check_url_access'])->group(function () {
       Route::post('/tasks/subtasks/{subtask}/status', [TaskController::class, 'changeSubTaskStatus'])->name('tasks.subtasks.change_status');
 
       Route::post('/tasks/{task}/comment', [TaskController::class, 'comment'])->name('tasks.comment');
-      Route::post('/tasks/{task}/attachment', [TaskController::class, 'uploadAttachment'])->name('tasks.attachment');
+
+      // Route::post('/tasks/{task}/attachment', [TaskController::class, 'uploadAttachment'])->name('tasks.attachment');
+
+
+      Route::post('/tasks/{task}/status', [TaskController::class, 'updateStatus'])
+    ->name('tasks.updateStatus');
+
+Route::post('/tasks/{task}/priority', [TaskController::class, 'updatePriority'])
+    ->name('tasks.updatePriority');
+
 
 
 });

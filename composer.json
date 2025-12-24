@@ -36,6 +36,8 @@
             "Tests\\": "tests/"
         }
     },
+
+    
     "scripts": {
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
