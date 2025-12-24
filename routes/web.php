@@ -127,11 +127,13 @@ Route::middleware(['auth', 'verified', 'check_url_access'])->group(function () {
       Route::post('/tasks/delete', [TaskController::class, 'delete'])
     ->name('tasks.delete');
 
-      // Additional AJAX endpoints for sub-tasks, comments, attachments
-      Route::post('/tasks/{task}/subtasks', [TaskController::class, 'storeSubTask'])->name('tasks.subtasks.store');
-      Route::get('/tasks/subtasks/{subtask}/edit', [TaskController::class, 'editSubTask'])->name('tasks.subtasks.edit');
-      Route::patch('/tasks/subtasks/{subtask}', [TaskController::class, 'updateSubTask'])->name('tasks.subtasks.update');
-      Route::post('/tasks/subtasks/{subtask}/status', [TaskController::class, 'changeSubTaskStatus'])->name('tasks.subtasks.change_status');
+     Route::post('/tasks/{task}/comment', [TaskController::class, 'comment'])->name('tasks.comment');
+Route::post('/tasks/{task}/attachment', [TaskController::class, 'uploadAttachment'])->name('tasks.attachment');
+
+Route::post('/tasks/{task}/subtasks', [TaskController::class, 'storeSubTask'])->name('tasks.subtasks.store');
+Route::patch('/tasks/subtasks/{subtask}', [TaskController::class, 'updateSubTask'])->name('tasks.subtasks.update');
+Route::post('/tasks/subtasks/{subtask}/status', [TaskController::class, 'changeSubTaskStatus'])->name('tasks.subtasks.change_status');
+      
 
       Route::post('/tasks/{task}/comment', [TaskController::class, 'comment'])->name('tasks.comment');
 

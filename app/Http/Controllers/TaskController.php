@@ -137,6 +137,7 @@ class TaskController extends Controller
                 : 'Task created',
         ]);
     });
+    
 
     return response()->json(['success' => true]);
 }
@@ -148,22 +149,23 @@ class TaskController extends Controller
 
 
     public function show(Task $task)
-    {
-       $task->load([
+{
+    $task->load([
         'status',
         'priority',
-        'owner',
-        'assignees',
-        'subTasks.owner',
+        'owner:id,name',
+        'assignees:id,name',
         'subTasks.status',
         'subTasks.priority',
+        'subTasks.owner:id,name',
         'activities' => fn ($q) => $q->latest(),
-        'activities.actor',
+        'activities.actor:id,name',
         'activities.attachments'
     ]);
 
-        return view('tasks.show', compact('task'));
-    }
+    return view('tasks.show', compact('task'));
+}
+
 
 
    public function delete(Request $request)
@@ -319,6 +321,31 @@ public function editSubTask(TaskSubTask $subtask)
 }
 
 
+public function changeTaskStatus(Request $request, Task $task)
+{
+    $map = [
+        'pause'  => 'Paused',
+        'resume' => 'In Progress',
+        'close'  => 'Closed',
+    ];
+
+    abort_unless(isset($map[$request->action]), 400);
+
+    $status = TaskStatus::where('name', $map[$request->action])->firstOrFail();
+
+    DB::transaction(function () use ($task, $status, $request) {
+        $task->update(['task_status_id' => $status->id]);
+
+        TaskActivity::create([
+            'task_id'       => $task->id,
+            'actor_id'      => auth()->id(),
+            'task_owner_id' => $task->task_owner_id,
+            'message'       => "Task {$request->action}d",
+        ]);
+    });
+
+    return response()->json(['success' => true]);
+}
 
 
 

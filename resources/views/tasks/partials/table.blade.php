@@ -36,7 +36,14 @@
         </span>
     </td>
 
-    <td>{{ optional($task->due_at)->format('d M Y') }}</td>
+    <td>
+    @if($task->due_at)
+        {{ \Carbon\Carbon::parse($task->due_at)->format('d M Y') }}
+    @else
+        <span class="text-muted">—</span>
+    @endif
+</td>
+
 
     <td class="text-nowrap">
         <button class="btn btn-sm btn-outline-primary openTaskView"
