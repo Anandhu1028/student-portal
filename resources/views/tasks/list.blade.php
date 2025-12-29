@@ -18,31 +18,31 @@
 
             <div class="task-search">
                 <input type="text"
-                       class="form-control form-control-sm taskSearch"
-                       placeholder="Search…">
+                    class="form-control form-control-sm taskSearch"
+                    placeholder="Search…">
             </div>
 
             <select class="form-select form-select-sm taskFilter filter-sm"
-                    data-name="status">
+                data-name="status">
                 <option value="">Status</option>
                 @foreach($statuses as $s)
-                    <option value="{{ $s->id }}">{{ $s->name }}</option>
+                <option value="{{ $s->id }}">{{ $s->name }}</option>
                 @endforeach
             </select>
 
             <select class="form-select form-select-sm taskFilter filter-sm"
-                    data-name="priority">
+                data-name="priority">
                 <option value="">Priority</option>
                 @foreach($priorities as $p)
-                    <option value="{{ $p->id }}">{{ $p->name }}</option>
+                <option value="{{ $p->id }}">{{ $p->name }}</option>
                 @endforeach
             </select>
 
             <select class="form-select form-select-sm taskFilter filter-sm"
-                    data-name="owner">
+                data-name="owner">
                 <option value="">Owner</option>
                 @foreach($users as $u)
-                    <option value="{{ $u->id }}">{{ $u->name }}</option>
+                <option value="{{ $u->id }}">{{ $u->name }}</option>
                 @endforeach
             </select>
 
@@ -61,86 +61,112 @@
 </div>
 
 <style>
-.task-search { width: 10%; min-width: 120px; }
-.task-filters .filter-sm { width: 120px; }
+    .task-search {
+        width: 10%;
+        min-width: 120px;
+    }
+
+    .task-filters .filter-sm {
+        width: 120px;
+    }
 </style>
 
 <script>
-/* ================= LOAD TASKS ================= */
-function loadTasks(page = 1) {
-    $.get("{{ route('tasks.list') }}", {
-        filter: 1,
-        status: $('[data-name="status"]').val(),
-        priority: $('[data-name="priority"]').val(),
-        owner: $('[data-name="owner"]').val(),
-        search: $('.taskSearch').val(),
-        page: page
-    }, function (html) {
-        $('#taskTable').html(html);
-        // initialize bootstrap tooltips in newly injected content
-        document.querySelectorAll('#taskTable [data-bs-toggle="tooltip"]').forEach(function (el) {
-            try { new bootstrap.Tooltip(el); } catch (e) { /* ignore */ }
-        });
+    let filterTimer = null;
+
+    /* ================= LOAD TASKS ================= */
+    function loadTasks(page = 1) {
+        const params = {
+            filter: 1,
+            status: $('[data-name="status"]').val(),
+            priority: $('[data-name="priority"]').val(),
+            owner: $('[data-name="owner"]').val(),
+            search: $('.taskSearch').val(),
+            page: page
+        };
+
+        preloader.load();
+
+        $.get("{{ route('tasks.list') }}", params)
+            .done(function(html) {
+                $('#taskTable').html(html);
+
+                // re-init tooltips
+                document.querySelectorAll('#taskTable [data-bs-toggle="tooltip"]')
+                    .forEach(el => new bootstrap.Tooltip(el));
+            })
+            .always(() => preloader.stop());
+    }
+
+    /* ================= FILTER EVENTS ================= */
+
+    // dropdown filters
+    $(document).on('change', '.taskFilter', function() {
+        loadTasks(1); // reset to page 1
     });
-}
 
-// Use delegated events per project JS rules
-$(document).on('change', '.taskFilter', loadTasks);
-$(document).on('keyup', '.taskSearch', loadTasks);
+    // debounced search
+    $(document).on('keyup', '.taskSearch', function() {
+        clearTimeout(filterTimer);
+        filterTimer = setTimeout(() => {
+            loadTasks(1);
+        }, 400);
+    });
 
-$(document).on('click', '#resetFilters', function () {
-    $('.taskFilter').val('');
-    $('.taskSearch').val('');
-    loadTasks();
-});
+    // reset filters
+    $(document).on('click', '#resetFilters', function() {
+        $('.taskFilter').val('');
+        $('.taskSearch').val('');
+        loadTasks(1);
+    });
 
-/* ================= CREATE TASK (GLOBAL OFFCANVAS) ================= */
-// open offcanvas create — delegated
-$(document).on('click', '#openCreateTask', function (e) {
-    e.preventDefault();
+    /* ================= PAGINATION (CRITICAL FIX) ================= */
+    $(document).on('click', '#taskTable .pagination a', function(e) {
+        e.preventDefault();
 
-    preloader.load();
+        const page = new URL(this.href).searchParams.get('page');
+        loadTasks(page);
+    });
 
-    $.get("{{ route('tasks.create') }}")
-        .done(function (response) {
-            preloader.stop();
+    /* ================= CREATE TASK (OFFCANVAS) ================= */
+    $(document).on('click', '#openCreateTask', function(e) {
+        e.preventDefault();
 
-            const offcanvasEl = document.getElementById('offcanvasCustom');
-            const bsOffcanvas = new bootstrap.Offcanvas(offcanvasEl);
+        preloader.load();
 
-            $('#offcanvasCustomHead').html('Create Task');
-            $('#offcanvasCustomBody').html(response);
+        $.get("{{ route('tasks.create') }}")
+            .done(function(response) {
+                const offcanvasEl = document.getElementById('offcanvasCustom');
+                const oc = new bootstrap.Offcanvas(offcanvasEl);
 
-            bsOffcanvas.show();
-            $('.selectpicker').selectpicker();
-        })
-        .fail(function () {
-            preloader.stop();
-            showAlert('Unable to load Create Task form', 'error');
-        });
-});
+                $('#offcanvasCustomHead').html('Create Task');
+                $('#offcanvasCustomBody').html(response);
 
-/* ================= SAVE TASK ================= */
-$(document).on('submit', '#taskCreateForm', function (e) {
-    e.preventDefault();
+                oc.show();
+                $('.selectpicker').selectpicker();
+            })
+            .fail(() => showAlert('Unable to load Create Task form', 'error'))
+            .always(() => preloader.stop());
+    });
 
-    preloader.load();
+    /* ================= SAVE TASK ================= */
+    $(document).on('submit', '#taskCreateForm', function(e) {
+        e.preventDefault();
 
-    $.post("{{ route('tasks.store') }}", $(this).serialize())
-        .done(function () {
-            preloader.stop();
+        preloader.load();
 
-            bootstrap.Offcanvas
-                .getInstance(document.getElementById('offcanvasCustom'))
-                .hide();
+        $.post("{{ route('tasks.store') }}", $(this).serialize())
+            .done(function() {
+                bootstrap.Offcanvas
+                    .getInstance(document.getElementById('offcanvasCustom'))
+                    .hide();
 
-            loadTasks();
-        })
-        .fail(function () {
-            preloader.stop();
-            showAlert('Failed to save task', 'error');
-        });
-});
+                loadTasks(); // reload list with filters intact
+            })
+            .fail(() => showAlert('Failed to save task', 'error'))
+            .always(() => preloader.stop());
+    });
 </script>
+
 
 @endsection

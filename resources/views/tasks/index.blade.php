@@ -26,35 +26,35 @@
                 </thead>
                 <tbody>
                     @forelse($tasks as $task)
-                        <tr>
-                            <td>{{ $loop->iteration }}</td>
-                            <td>{{ $task->title }}</td>
-                            <td>{{ $task->task_type ?? '—' }}</td>
-                            <td>
-                                {{ $task->status->name ?? '—' }}
-                            </td>
-                            <td>
-                                {{ $task->priority->name ?? '—' }}
-                            </td>
-                            <td>
-                                {{ $task->owner->name ?? '—' }}
-                            </td>
-                            <td>
-                                {{ $task->due_at?->format('d M Y') ?? '—' }}
-                            </td>
-                            <td>
-                                <a href="{{ route('tasks.show', $task->id) }}"
-                                   class="btn btn-sm btn-outline-primary">
-                                    View
-                                </a>
-                            </td>
-                        </tr>
+                    <tr>
+                        <td>{{ $loop->iteration }}</td>
+                        <td>{{ $task->title }}</td>
+                        <td>{{ $task->task_type ?? '—' }}</td>
+                        <td>
+                            {{ $task->status->name ?? '—' }}
+                        </td>
+                        <td>
+                            {{ $task->priority->name ?? '—' }}
+                        </td>
+                        <td>
+                            {{ $task->owner->name ?? '—' }}
+                        </td>
+                        <td>
+                            {{ $task->due_at?->format('d M Y') ?? '—' }}
+                        </td>
+                        <td>
+                            <a href="{{ route('tasks.show', $task->id) }}"
+                                class="btn btn-sm btn-outline-primary">
+                                View
+                            </a>
+                        </td>
+                    </tr>
                     @empty
-                        <tr>
-                            <td colspan="8" class="text-center text-muted">
-                                <i>No tasks found</i>
-                            </td>
-                        </tr>
+                    <tr>
+                        <td colspan="8" class="text-center text-muted">
+                            <i>No tasks found</i>
+                        </td>
+                    </tr>
                     @endforelse
                 </tbody>
             </table>

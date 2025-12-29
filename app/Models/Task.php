@@ -71,4 +71,10 @@ class Task extends Model
     {
         return $this->belongsTo(TaskType::class, 'task_type_id');
     }
+
+    public function forwards()
+    {
+        return $this->hasMany(TaskForward::class);
+    }
+
 }
