@@ -121,7 +121,7 @@
     }
 
     /* Attachments */
-    .activity-attachments {
-        margin
+    /* .activity-attachments {
+        margin */
         
 </style>

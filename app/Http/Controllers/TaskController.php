@@ -463,57 +463,62 @@ class TaskController extends Controller
 
 
     /** SUB-TASKS */
-    public function storeSubTask(Request $request, Task $task)
-    {
-        $data = $request->validate([
-            'title' => 'required|string|max:255',
-            'description' => 'nullable|string',
-            'task_status_id' => 'required|exists:task_statuses,id',
-            'task_priority_id' => 'required|exists:task_priorities,id',
-            'due_at' => 'nullable|date',
-        ]);
+        public function storeSubTask(Request $request, Task $task)
+        {
+            $data = $request->validate([
+                'title' => 'required|string|max:255',
+                'description' => 'nullable|string',
+                'task_status_id' => 'required|exists:task_statuses,id',
+                'task_priority_id' => 'required|exists:task_priorities,id',
+                'due_at' => 'nullable|date',
+            ]);
 
-        // 🔒 HARD DUPLICATE PROTECTION
-        $exists = TaskSubTask::where('task_id', $task->id)
-            ->where('title', $data['title'])
-            ->where('task_owner_id', auth()->id())
-            ->exists();
+            //  HARD DUPLICATE PROTECTION
+            $exists = TaskSubTask::where('task_id', $task->id)
+                ->where('title', $data['title'])
+                ->where('task_owner_id', auth()->id())
+                ->exists();
 
-        if ($exists) {
+            if ($exists) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'This sub-task already exists'
+                ], 422);
+            }
+
+            $subtask = DB::transaction(function () use ($data, $task) {
+
+                $subtask = TaskSubTask::create([
+                    'task_id' => $task->id,
+                    'title' => $data['title'],
+                    'description' => $data['description'] ?? null,
+                    'task_status_id' => $data['task_status_id'],
+                    'task_priority_id' => $data['task_priority_id'],
+                    'task_owner_id' => auth()->id(),
+                    'due_at' => $data['due_at'] ?? null,
+                ]);
+
+                //  ACTIVITY MESSAGE
+                TaskActivity::create([
+                    'task_id' => $task->id,
+                    'sub_task_id' => $subtask->id,
+                    'actor_id' => auth()->id(),
+                    'task_owner_id' => $task->task_owner_id,
+                    'message' =>
+                        "Sub-task created\n" .
+                        "Title: {$subtask->title}\n" .
+                        "Description: " . ($subtask->description ?: '—'),
+                ]);
+
+                return $subtask;
+            });
+
             return response()->json([
-                'success' => false,
-                'message' => 'This sub-task already exists'
-            ], 422);
+                'success' => true,
+                'data' => $subtask->load('status', 'priority', 'owner'),
+            ]);
         }
 
-        $subtask = DB::transaction(function () use ($data, $task) {
-
-            $subtask = TaskSubTask::create([
-                'task_id' => $task->id,
-                'title' => $data['title'],
-                'description' => $data['description'] ?? null,
-                'task_status_id' => $data['task_status_id'],
-                'task_priority_id' => $data['task_priority_id'],
-                'task_owner_id' => auth()->id(),
-                'due_at' => $data['due_at'] ?? null,
-            ]);
-
-            TaskActivity::create([
-                'task_id' => $task->id,
-                'sub_task_id' => $subtask->id,
-                'actor_id' => auth()->id(),
-                'task_owner_id' => $task->task_owner_id,
-                'message' => "Sub-task created: {$subtask->title}",
-            ]);
-
-            return $subtask;
-        });
-
-        return response()->json([
-            'success' => true,
-            'data' => $subtask->load('status', 'priority', 'owner'),
-        ]);
-    }
 
 
     public function updateSubTask(Request $request, TaskSubTask $subtask)
