@@ -77,4 +77,8 @@ class Task extends Model
         return $this->hasMany(TaskForward::class);
     }
 
+    public function attachments()
+    {
+        return $this->hasMany(TaskAttachment::class);
+    }
 }

@@ -1,56 +1,127 @@
-<ul class="list-unstyled mb-0">
+<!----------------------------------------------
+       THIS THE ACTIVITY TIMELINE SECTION.
+     ------------------------------------------------>
+
+
+<ul class="list-unstyled mb-0 activity-timeline">
 
     @forelse($activities as $activity)
 
-        @php
-            $actorName = optional($activity->actor)->name ?? 'System';
-            $avatar = strtoupper(mb_substr($actorName, 0, 1));
-        @endphp
+    @php
+    $actorName = optional($activity->actor)->name ?? 'System';
+    $avatar = strtoupper(mb_substr($actorName, 0, 1));
+    @endphp
 
-        <li class="mb-3 d-flex gap-3">
+    <li class="activity-item d-flex gap-3 mb-3">
 
-            {{-- AVATAR --}}
-            <div class="rounded-circle bg-primary text-white
-                    d-flex align-items-center justify-content-center" style="width:36px;height:36px;font-weight:600;">
-                {{ $avatar }}
+        {{-- AVATAR --}}
+        <div class="activity-avatar">
+            {{ $avatar }}
+        </div>
+
+        {{-- CONTENT --}}
+        <div class="flex-grow-1">
+
+            {{-- HEADER --}}
+            <div class="d-flex justify-content-between align-items-start">
+                <strong class="activity-user">
+                    {{ $actorName }}
+                </strong>
+
+                <small class="activity-time">
+                    {{ $activity->created_at->diffForHumans() }}
+                </small>
             </div>
 
-            {{-- CONTENT --}}
-            <div class="flex-grow-1">
-
-                <div class="d-flex justify-content-between align-items-center">
-                    <strong>{{ $actorName }}</strong>
-                    <small class="text-muted">
-                        {{ $activity->created_at->diffForHumans() }}
-                    </small>
-                </div>
-
-                <div class="mt-1">
-                    {{ $activity->message }}
-                </div>
-
-                {{-- ATTACHMENTS --}}
-                @if($activity->attachments && $activity->attachments->count())
-                    <div class="mt-2 small text-muted">
-                        @foreach($activity->attachments as $file)
-                            <div>
-                                <a href="{{ asset('storage/' . $file->file_path) }}" target="_blank"
-                                    class="text-decoration-none text-primary">
-                                    📎 {{ basename($file->file_path) }}
-                                </a>
-                            </div>
-                        @endforeach
-                    </div>
-                @endif
-
+            {{-- MESSAGE --}}
+            <div class="activity-message mt-1">
+                {!! nl2br(e(trim($activity->message))) !!}
             </div>
 
-        </li>
+            {{-- ATTACHMENTS --}}
+            @if($activity->attachments->count())
+            <div class="activity-attachments mt-2 d-flex flex-wrap gap-2">
+                @foreach($activity->attachments as $file)
+                <a href="{{ asset('storage/'.$file->file_path) }}"
+                    target="_blank"
+                    class="activity-attachment"
+                    title="{{ $file->original_name }}">
+
+                    <img src="{{ asset('storage/'.$file->file_path) }}"
+                        alt="attachment"
+                        loading="lazy">
+                </a>
+                @endforeach
+            </div>
+            @endif
+
+        </div>
+
+    </li>
 
     @empty
-        <li class="text-center text-muted py-3">
-            No activity yet
-        </li>
+    <li class="text-center text-muted py-3">
+        No activity yet
+    </li>
     @endforelse
 
 </ul>
+
+
+
+<style>
+    /* ================= ACTIVITY TIMELINE ================= */
+
+    .activity-timeline {
+        font-size: 13px;
+    }
+
+    .activity-item {
+        align-items: flex-start;
+    }
+
+    /* Avatar */
+    .activity-avatar {
+        width: 36px;
+        height: 36px;
+        border-radius: 50%;
+        background: #0c768a;
+        color: #fff;
+        font-weight: 600;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-shrink: 0;
+    }
+
+    /* Header */
+    .activity-user {
+        font-size: 13px;
+        font-weight: 600;
+        color: #111827;
+    }
+
+    .activity-time {
+        font-size: 11px;
+        color: #6b7280;
+        white-space: nowrap;
+    }
+
+    /* Message */
+    .activity-message {
+        font-size: 13px;
+        line-height: 1.6;
+        color: #F0c768a;
+        margin-top: 4px;
+    }
+
+    .activity-message br {
+        display: block;
+        margin-bottom: 4px;
+    }
+
+    /* Attachments */
+    .activity-attachments {
+        margin
+        
+</style>

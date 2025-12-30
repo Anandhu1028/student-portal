@@ -141,6 +141,13 @@ Route::middleware(['auth', 'verified', 'check_url_access'])->group(function () {
     Route::post('/tasks/{task}/forward',  [TaskController::class, 'forward'])->name('tasks.forward');
     Route::delete('/tasks/forwards/{forward}', [TaskController::class, 'deleteForward']);
 
+    Route::delete('/task-attachments/{attachment}', [TaskController::class, 'deleteAttachment'])->name('tasks.attachments.delete');
+
+Route::delete(
+    '/task-attachments/{id}',
+    [TaskController::class, 'deleteAttachment']
+)->name('tasks.attachments.delete');
+
 
 
 

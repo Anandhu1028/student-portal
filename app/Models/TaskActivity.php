@@ -42,4 +42,7 @@ class TaskActivity extends Model
     {
         return $this->belongsTo(TaskSubTask::class, 'sub_task_id');
     }
+
+   
+
 }

@@ -1,20 +1,25 @@
+<!----------------------------------------------
+       THIS THE TASK CREATING(EDITING) SECTION.
+     ------------------------------------------------>
+
 @extends('layouts.layout_ajax')
 
 @section('content')
-<form id="taskCreateForm">
+<form id="taskCreateForm" enctype="multipart/form-data">
+
     @csrf
 
     @if(isset($task))
-        <input type="hidden" name="id" value="{{ $task->id }}">
+    <input type="hidden" name="id" value="{{ $task->id }}">
     @endif
 
     @php
-        $isEdit = isset($task);
+    $isEdit = isset($task);
 
-        $assignedIds = old(
-            'assignees',
-            $isEdit ? $task->assignees->pluck('id')->toArray() : []
-        );
+    $assignedIds = old(
+    'assignees',
+    $isEdit ? $task->assignees->pluck('id')->toArray() : []
+    );
     @endphp
 
     <div class="card">
@@ -29,10 +34,10 @@
                 <div class="col-md-6">
                     <label class="form-label">Title *</label>
                     <input type="text"
-                           name="title"
-                           class="form-control form-control-sm"
-                           required
-                           value="{{ old('title', $task->title ?? '') }}">
+                        name="title"
+                        class="form-control form-control-sm"
+                        required
+                        value="{{ old('title', $task->title ?? '') }}">
                 </div>
 
                 {{-- OWNER (READ ONLY) --}}
@@ -40,27 +45,27 @@
                     <label class="form-label">Owner *</label>
 
                     <input type="hidden"
-                           name="task_owner_id"
-                           value="{{ old('task_owner_id', $task->task_owner_id ?? auth()->id()) }}">
+                        name="task_owner_id"
+                        value="{{ old('task_owner_id', $task->task_owner_id ?? auth()->id()) }}">
 
                     <input type="text"
-                           class="form-control form-control-sm"
-                           value="{{ auth()->user()->name }}"
-                           readonly>
+                        class="form-control form-control-sm"
+                        value="{{ auth()->user()->name }}"
+                        readonly>
                 </div>
 
                 {{-- STATUS --}}
                 <div class="col-md-6">
                     <label class="form-label">Status *</label>
                     <select name="task_status_id"
-                            class="form-select form-select-sm"
-                            required>
+                        class="form-select form-select-sm"
+                        required>
                         <option value="">Select status</option>
                         @foreach($statuses as $s)
-                            <option value="{{ $s->id }}"
-                                {{ old('task_status_id', $task->task_status_id ?? '') == $s->id ? 'selected' : '' }}>
-                                {{ $s->name }}
-                            </option>
+                        <option value="{{ $s->id }}"
+                            {{ old('task_status_id', $task->task_status_id ?? '') == $s->id ? 'selected' : '' }}>
+                            {{ $s->name }}
+                        </option>
                         @endforeach
                     </select>
                 </div>
@@ -69,14 +74,14 @@
                 <div class="col-md-6">
                     <label class="form-label">Priority *</label>
                     <select name="task_priority_id"
-                            class="form-select form-select-sm"
-                            required>
+                        class="form-select form-select-sm"
+                        required>
                         <option value="">Select priority</option>
                         @foreach($priorities as $p)
-                            <option value="{{ $p->id }}"
-                                {{ old('task_priority_id', $task->task_priority_id ?? '') == $p->id ? 'selected' : '' }}>
-                                {{ $p->name }}
-                            </option>
+                        <option value="{{ $p->id }}"
+                            {{ old('task_priority_id', $task->task_priority_id ?? '') == $p->id ? 'selected' : '' }}>
+                            {{ $p->name }}
+                        </option>
                         @endforeach
                     </select>
                 </div>
@@ -85,9 +90,9 @@
                 <div class="col-md-6">
                     <label class="form-label">Due Date</label>
                     <input type="date"
-                           name="due_at"
-                           class="form-control form-control-sm"
-                           value="{{ old(
+                        name="due_at"
+                        class="form-control form-control-sm"
+                        value="{{ old(
                                 'due_at',
                                 isset($task->due_at)
                                     ? \Carbon\Carbon::parse($task->due_at)->format('Y-m-d')
@@ -100,17 +105,17 @@
                     <label class="form-label">Assigned Users</label>
 
                     <select name="assignees[]"
-                            class="form-control form-control-sm selectpicker"
-                            multiple
-                            data-live-search="true"
-                            data-actions-box="true"
-                            data-width="100%">
+                        class="form-control form-control-sm selectpicker"
+                        multiple
+                        data-live-search="true"
+                        data-actions-box="true"
+                        data-width="100%">
 
                         @foreach($users as $u)
-                            <option value="{{ $u->id }}"
-                                {{ in_array($u->id, $assignedIds) ? 'selected' : '' }}>
-                                {{ $u->name }}
-                            </option>
+                        <option value="{{ $u->id }}"
+                            {{ in_array($u->id, $assignedIds) ? 'selected' : '' }}>
+                            {{ $u->name }}
+                        </option>
                         @endforeach
 
                     </select>
@@ -120,23 +125,36 @@
                 <div class="col-12">
                     <label class="form-label">Description</label>
                     <textarea name="description"
-                              class="form-control form-control-sm"
-                              rows="3">{{ old('description', $task->description ?? '') }}</textarea>
+                        class="form-control form-control-sm"
+                        rows="3">{{ old('description', $task->description ?? '') }}</textarea>
                 </div>
+
+
+                <div class="col-12">
+                    <label class="form-label">Screenshots / Attachments</label>
+                    <input type="file"
+                        name="attachments[]"
+                        class="form-control form-control-sm"
+                        multiple
+                        accept="image/*">
+                    <small class="text-muted">PNG, JPG, max 10MB each</small>
+                </div>
+
 
             </div>
         </div>
 
         <div class="card-footer text-end">
-            <button class="btn btn-sm btn-primary">
+            <button type="submit" class="btn btn-sm btn-primary">
                 {{ $isEdit ? 'Update Task' : 'Save Task' }}
             </button>
+
         </div>
     </div>
 </form>
 
 <script>
-    setTimeout(function () {
+    setTimeout(function() {
 
         const $picker = $('.selectpicker');
 

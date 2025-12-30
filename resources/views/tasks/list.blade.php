@@ -1,3 +1,7 @@
+<!--------------------------------------------------------------------
+       THIS THE TASK LIST SECTION ( HERE LODE TABLE & ACTIVIY FILES).
+ ----------------- ------------------------------------------------>
+
 @extends('layouts.layout_ajax')
 @section('content')
 
@@ -72,101 +76,161 @@
 </style>
 
 <script>
-    let filterTimer = null;
 
-    /* ================= LOAD TASKS ================= */
-    function loadTasks(page = 1) {
-        const params = {
-            filter: 1,
-            status: $('[data-name="status"]').val(),
-            priority: $('[data-name="priority"]').val(),
-            owner: $('[data-name="owner"]').val(),
-            search: $('.taskSearch').val(),
-            page: page
-        };
+let filterTimer = null;
+
+/* ================= LOAD TASKS (AJAX ONLY) ================= */
+function loadTasks(page = 1) {
+    const params = {
+        filter: 1,
+        status: $('[data-name="status"]').val(),
+        priority: $('[data-name="priority"]').val(),
+        owner: $('[data-name="owner"]').val(),
+        search: $('.taskSearch').val(),
+        page: page
+    };
+
+    preloader.load();
+
+    $.get("{{ route('tasks.list') }}", params)
+        .done(function (html) {
+            $('#taskTable').html(html);
+
+            // re-init tooltips
+            document
+                .querySelectorAll('#taskTable [data-bs-toggle="tooltip"]')
+                .forEach(el => new bootstrap.Tooltip(el));
+        })
+        .always(() => preloader.stop());
+}
+
+
+
+/* ================= FILTER EVENTS ================= */
+$(document).on('change', '.taskFilter', function () {
+    loadTasks(1);
+});
+
+$(document).on('keyup', '.taskSearch', function () {
+    clearTimeout(filterTimer);
+    filterTimer = setTimeout(() => loadTasks(1), 400);
+});
+
+$(document).on('click', '#resetFilters', function () {
+    $('.taskFilter').val('');
+    $('.taskSearch').val('');
+    loadTasks(1);
+});
+
+
+
+
+
+/* ================= PAGINATION ================= */
+$(document).on('click', '#taskTable .pagination a', function (e) {
+    e.preventDefault();
+    const page = new URL(this.href).searchParams.get('page');
+    loadTasks(page);
+});
+
+
+
+/* ================= CREATE TASK (OFFCANVAS) ================= */
+$(document).on('click', '#openCreateTask', function (e) {
+    e.preventDefault();
+
+    preloader.load();
+
+    $.get("{{ route('tasks.create') }}")
+        .done(function (response) {
+            const offcanvasEl = document.getElementById('offcanvasCustom');
+            const oc = new bootstrap.Offcanvas(offcanvasEl);
+
+            $('#offcanvasCustomHead').html('Create Task');
+            $('#offcanvasCustomBody').html(response);
+
+            oc.show();
+
+            setTimeout(() => {
+                $('.selectpicker').selectpicker('refresh');
+            }, 100);
+        })
+        .fail(() => showAlert('Unable to load Create Task form', 'error'))
+        .always(() => preloader.stop());
+});
+
+
+
+
+/* ================= SAVE TASK ================= */
+$(document)
+    .off('submit.taskSave')
+    .on('submit.taskSave', '#taskCreateForm', function (e) {
+
+        e.preventDefault();
+
+        const form = this;
+        const data = new FormData(form);
+
+        if ($(form).data('loading')) return;
+        $(form).data('loading', true);
 
         preloader.load();
 
-        $.get("{{ route('tasks.list') }}", params)
-            .done(function(html) {
-                $('#taskTable').html(html);
+        $.ajax({
+            url: "{{ route('tasks.store') }}",
+            method: "POST",
+            data: data,
+            processData: false,
+            contentType: false,
+        })
+        .done(() => {
 
-                // re-init tooltips
-                document.querySelectorAll('#taskTable [data-bs-toggle="tooltip"]')
-                    .forEach(el => new bootstrap.Tooltip(el));
-            })
-            .always(() => preloader.stop());
-    }
+            // close offcanvas
+            const ocEl = document.getElementById('offcanvasCustom');
+            if (ocEl) {
+                const oc = bootstrap.Offcanvas.getInstance(ocEl);
+                oc?.hide();
+            }
 
-    /* ================= FILTER EVENTS ================= */
+            // show success modal
+            $('#modal_title_custom').text('Success');
+            $('#modal_body_custom').html(
+                '<p class="mb-0">Task saved successfully.</p>'
+            );
 
-    // dropdown filters
-    $(document).on('change', '.taskFilter', function() {
-        loadTasks(1); // reset to page 1
-    });
+            const modalEl = document.getElementById('modal_custom');
+            const modal = new bootstrap.Modal(modalEl);
+            modal.show();
+        })
+        .fail(xhr => {
 
-    // debounced search
-    $(document).on('keyup', '.taskSearch', function() {
-        clearTimeout(filterTimer);
-        filterTimer = setTimeout(() => {
-            loadTasks(1);
-        }, 400);
-    });
+            $('#modal_title_custom_error').text('Error');
+            $('#modal_body_custom_error').html(
+                `<p class="mb-0">${xhr.responseJSON?.message || 'Save failed'}</p>`
+            );
 
-    // reset filters
-    $(document).on('click', '#resetFilters', function() {
-        $('.taskFilter').val('');
-        $('.taskSearch').val('');
-        loadTasks(1);
-    });
+            new bootstrap.Modal(
+                document.getElementById('modal_custom_error')
+            ).show();
+        })
+        .always(() => {
+            preloader.stop();
+            $(form).data('loading', false);
+        });
+});
 
-    /* ================= PAGINATION (CRITICAL FIX) ================= */
-    $(document).on('click', '#taskTable .pagination a', function(e) {
-        e.preventDefault();
 
-        const page = new URL(this.href).searchParams.get('page');
-        loadTasks(page);
-    });
 
-    /* ================= CREATE TASK (OFFCANVAS) ================= */
-    $(document).on('click', '#openCreateTask', function(e) {
-        e.preventDefault();
 
-        preloader.load();
 
-        $.get("{{ route('tasks.create') }}")
-            .done(function(response) {
-                const offcanvasEl = document.getElementById('offcanvasCustom');
-                const oc = new bootstrap.Offcanvas(offcanvasEl);
-
-                $('#offcanvasCustomHead').html('Create Task');
-                $('#offcanvasCustomBody').html(response);
-
-                oc.show();
-                $('.selectpicker').selectpicker();
-            })
-            .fail(() => showAlert('Unable to load Create Task form', 'error'))
-            .always(() => preloader.stop());
-    });
-
-    /* ================= SAVE TASK ================= */
-    $(document).on('submit', '#taskCreateForm', function(e) {
-        e.preventDefault();
-
-        preloader.load();
-
-        $.post("{{ route('tasks.store') }}", $(this).serialize())
-            .done(function() {
-                bootstrap.Offcanvas
-                    .getInstance(document.getElementById('offcanvasCustom'))
-                    .hide();
-
-                loadTasks(); // reload list with filters intact
-            })
-            .fail(() => showAlert('Failed to save task', 'error'))
-            .always(() => preloader.stop());
-    });
+/* ================= REFRESH LIST AFTER MODAL CLOSE ================= */
+$('#modal_custom').on('hidden.bs.modal', function () {
+    loadTasks(1);
+});
 </script>
+
+
 
 
 @endsection

@@ -1,14 +1,19 @@
+<!----------------------------------------------
+       THIS THE TASK LIST TABLE (TABLE SECTION ONLY).
+     ------------------------------------------------>
+
 <table class="table table-bordered table-striped">
     <thead>
         <tr>
             <th>Title</th>
-            <th></th>
+            <th>Description</th>
+            <th>Files</th>
             <th>Status</th>
             <th>Priority</th>
             <th>Owner</th>
             <th>Assigned</th>
-            <th>Due</th>
-            <th>Action</th>
+            <th>Due Date</th>
+            <th>Actions</th>
         </tr>
     </thead>
 
@@ -25,9 +30,30 @@
 
             <td class="task-desc-cell">
                 @if($task->description)
-                <div class="task-desc">
-                    {{ $task->description }}
+                <div class="task-desc"
+                    data-short="{{ \Illuminate\Support\Str::limit($task->description, 50, '') }}"
+                    data-full="{{ e($task->description) }}">
+                    {{ \Illuminate\Support\Str::limit($task->description, 50, '') }}
                 </div>
+                @else
+                <span class="text-muted">—</span>
+                @endif
+            </td>
+
+
+
+            <td class="text-center">
+                @php
+                $files = $task->attachments ?? collect();
+                $count = $files->count();
+                @endphp
+
+                @if($count > 0)
+                <span class="badge bg-primary"
+                    data-bs-toggle="tooltip"
+                    title="{{ $files->pluck('original_name')->join(', ') }}">
+                    {{ $count }}
+                </span>
                 @else
                 <span class="text-muted">—</span>
                 @endif
@@ -153,19 +179,6 @@
         border-radius: 4px;
     }
 
-    .task-desc {
-        max-height: 1.5em;
-        /* ~1 line */
-        overflow: hidden;
-        text-overflow: ellipsis;
-
-        font-size: 0.875rem;
-
-
-        transition: max-height 0.3s ease,
-            background 0.2s ease,
-            padding 0.2s ease;
-    }
 
     /* EXPAND ON HOVER */
     .task-desc-cell:hover .task-desc {
@@ -178,15 +191,40 @@
     }
 
     .task-desc {
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        white-space: normal;
+        max-height: 1.6em;
+        overflow: hidden;
+        font-size: 0.875rem;
+        color: #374151;
+
+        transition: max-height 0.35s ease,
+            padding 0.25s ease,
+            background 0.25s ease;
+    }
+
+    /* expand on hover */
+    .task-desc-cell:hover .task-desc {
+        max-height: 300px;
+        padding: 6px 8px;
+
+        border-radius: 4px;
     }
 </style>
 
 
 <script>
+    /* ================= Hover then task Description transition================= */
+    $(document).on('mouseenter', '.task-desc-cell', function() {
+        const el = $(this).find('.task-desc');
+        el.text(el.data('full'));
+    });
+
+    $(document).on('mouseleave', '.task-desc-cell', function() {
+        const el = $(this).find('.task-desc');
+        el.text(el.data('short'));
+    });
+
+
+
     /* ================= FORWARD TASK ================= */
 
     $(document).on('click', '.forwardTask', function() {
@@ -262,7 +300,7 @@
 
             oc.show();
 
-            // 🔥 CRITICAL FIX
+            //  CRITICAL FIX
             setTimeout(function() {
                 $('.selectpicker').selectpicker('render');
                 $('.selectpicker').selectpicker('refresh');
