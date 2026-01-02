@@ -111,7 +111,7 @@
     .activity-message {
         font-size: 13px;
         line-height: 1.6;
-        color: #F0c768a;
+        color: #F0c768;
         margin-top: 4px;
     }
 

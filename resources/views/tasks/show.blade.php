@@ -15,7 +15,15 @@
         <div class="card task-info-card mb-3">
             <div class="card-body">
 
-                <h5 class="mb-1 task-title">{{ $task->title }}</h5>
+                <h5 class="mb-1">
+                    <span class="task-title-ellipsis"
+                        data-bs-toggle="tooltip"
+                        data-bs-placement="top"
+                        title="{{ $task->title }}">
+                        {{ \Illuminate\Support\Str::limit($task->title, 60) }}
+                    </span>
+                </h5>
+
                 <p class="text-muted small mb-3">{{ $task->description ?: '—' }}</p>
 
                 {{-- UPLOADED SCREENSHOTS --}}
@@ -48,41 +56,131 @@
                     {{-- ROW 1 --}}
                     <div class="task-meta-row">
                         <div class="meta-left">
-                            <span class="meta-label">Owner:</span>
+                            <span class=" meta-label">Owner:</span>
                             <span class="meta-value">{{ optional($task->owner)->name ?? '—' }}</span>
                         </div>
                         <div class="meta-right">
-                            <span class="meta-label">Status:</span>
-                            <span class="badge bg-secondary">
-                                {{ optional($task->status)->name ?? '—' }}
-                            </span>
-                            <span class="meta-label ms-3">Priority:</span>
-                            <span class="badge bg-info">
-                                {{ optional($task->priority)->name ?? '—' }}
-                            </span>
+
+                            {{-- STATUS --}}
+                            <div class="inline-edit-wrapper">
+                                <span class="meta-label">Status:</span>
+
+                                <span class="badge bg-secondary status-badge"
+                                    data-task-id="{{ $task->id }}"
+                                    data-current="{{ $task->task_status_id }}">
+                                    {{ optional($task->status)->name ?? '—' }}
+                                </span>
+
+                                <i class="ri-pencil-line inline-edit-icon toggleStatusEdit"></i>
+
+                                <select class="form-select form-select-sm inline-select status-select d-none"
+                                    data-task-id="{{ $task->id }}">
+                                    @foreach(\App\Models\TaskStatus::all() as $status)
+                                    <option value="{{ $status->id }}"
+                                        {{ $task->task_status_id == $status->id ? 'selected' : '' }}>
+                                        {{ $status->name }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
+                            {{-- PRIORITY --}}
+                            <div class="inline-edit-wrapper ms-3">
+                                <span class="meta-label">Priority:</span>
+
+                                <span class="badge bg-info priority-badge"
+                                    data-task-id="{{ $task->id }}"
+                                    data-current="{{ $task->task_priority_id }}">
+                                    {{ optional($task->priority)->name ?? '—' }}
+                                </span>
+
+                                <i class="ri-pencil-line inline-edit-icon togglePriorityEdit"></i>
+
+                                <select class="form-select form-select-sm inline-select priority-select d-none"
+                                    data-task-id="{{ $task->id }}">
+                                    @foreach(\App\Models\TaskPriority::all() as $priority)
+                                    <option value="{{ $priority->id }}"
+                                        {{ $task->task_priority_id == $priority->id ? 'selected' : '' }}>
+                                        {{ $priority->name }}
+                                    </option>
+                                    @endforeach
+                                </select>
+                            </div>
+
                         </div>
+
                     </div>
 
                     {{-- ROW 2 --}}
                     <div class="task-meta-row">
                         <div class="meta-left">
                             <span class="meta-label">Assigned Users:</span>
-                            <span class="meta-value">
-                                {{ $task->assignees?->pluck('name')->join(', ') ?: '—' }}
+
+                            <span class="meta-value d-flex flex-wrap gap-1">
+                                @if($task->assignees && $task->assignees->count())
+                                @foreach($task->assignees as $user)
+                                <span class="badge bg-primary position-relative pe-3">
+                                    {{ $user->name }}
+
+                                    <button type="button"
+                                        class="btn btn-sm btn-close deleteAssignee"
+                                        data-task="{{ $task->id }}"
+                                        data-user="{{ $user->id }}"
+                                        title="Remove user">
+                                    </button>
+                                </span>
+                                @endforeach
+                                @else
+                                <span class="text-muted">—</span>
+                                @endif
                             </span>
                         </div>
-                        <div class="meta-right">
-                            <span class="meta-label">Forward To:</span>
-                            @if($task->forwards && $task->forwards->count())
-                            @foreach($task->forwards as $forward)
-                            <span class="badge bg-warning text-dark">
-                                {{ optional($forward->department)->name }}
-                            </span>
-                            @endforeach
-                            @else
-                            <span class="text-muted">—</span>
-                            @endif
-                        </div>
+
+
+                       <div class="meta-right">
+    <span class="meta-label">Forward To:</span>
+
+    @if($task->forwards && $task->forwards->count())
+        <div class="d-flex flex-wrap gap-2">
+            @foreach($task->forwards as $forward)
+
+                @if($forward->department)
+                    <span class="badge bg-warning text-dark forward-badge">
+                        Dept: {{ $forward->department->name }}
+
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-danger forward-remove revokeForward"
+                            data-id="{{ $forward->id }}"
+                            title="Remove forward">
+                            ×
+                        </button>
+                    </span>
+
+                @elseif($forward->user)
+                    <span class="badge bg-info text-dark forward-badge">
+                        User: {{ $forward->user->name }}
+
+                        <button
+                            type="button"
+                            class="btn btn-sm btn-danger forward-remove revokeForward"
+                            data-id="{{ $forward->id }}"
+                            title="Remove forward">
+                            ×
+                        </button>
+                    </span>
+                @endif
+
+            @endforeach
+        </div>
+    @else
+        <span class="text-muted">—</span>
+    @endif
+</div>
+
+
+
+
                     </div>
 
                     {{-- ROW 3 --}}
@@ -181,6 +279,76 @@
 </div>
 
 <style>
+    .forward-badge {
+    position: relative;
+    padding-right: 22px;
+}
+
+.forward-remove {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 20px;
+    height: 20px;
+    padding: 0;
+    border-radius: 50%;
+    font-size: 14px;
+    line-height: 1;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+
+.forward-badge:hover .forward-remove {
+    opacity: 1;
+}
+
+
+
+    .meta-value .badge,
+    .meta-right .badge {
+        font-size: 11px;
+        padding: 4px 18px 4px 8px;
+        border-radius: 10px;
+    }
+
+    .badge .btn-close {
+        position: absolute;
+        top: 2px;
+        right: 4px;
+        font-size: 10px;
+        opacity: 0;
+    }
+
+    .badge:hover .btn-close {
+        opacity: 1;
+    }
+
+
+    /* ================= STATUS & PRIORITY  ================= */
+    .inline-edit-wrapper {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+    }
+
+    .inline-edit-icon {
+        font-size: 14px;
+        cursor: pointer;
+        color: #6b7280;
+    }
+
+    .inline-edit-icon:hover {
+        color: #111827;
+    }
+
+    .inline-select {
+        width: auto;
+        min-width: 140px;
+        font-size: 12px;
+    }
+
+
+
     /* ================= LAYOUT ================= */
     .task-view-wrapper {
         padding: 0;
@@ -641,147 +809,247 @@
 {{-- SCRIPTS --}}
 
 
-
 <script>
-    /* ================= DELETE ATTACHMENT ================= */
-    $(document)
-        .off('click', '.deleteAttachment')
-        .on('click', '.deleteAttachment', function() {
+    /* ================= GLOBALS ================= */
+    const TASK_ID = {{ $task->id }};
+    const CSRF = "{{ csrf_token() }}";
 
-            const attachmentId = $(this).data('id');
-            if (!confirm('Remove this screenshot?')) return;
 
-            preloader.load();
+    /* ================= TASK RELOAD ================= */
+    function reloadTaskView() {
+        preloader.load();
+        $.get(`/tasks/${TASK_ID}?view=1`)
+            .done(html => $('#offcanvasCustomBody').html(html))
+            .fail(() => showAlert('Failed to reload task view', 'error'))
+            .always(() => preloader.stop());
+    }
 
-            $.ajax({
-                    url: "{{ route('tasks.attachments.delete', ':id') }}".replace(':id', attachmentId),
-                    type: 'DELETE',
-                    headers: {
-                        'X-CSRF-TOKEN': "{{ csrf_token() }}"
-                    }
-                })
-                .done(function(res) {
-                    if (res.success) {
-                        reloadTaskView({
-                            {
-                                $task - > id
-                            }
-                        }); // ✅ CORRECT
-                    } else {
-                        showAlert(res.message || 'Delete failed', 'error');
-                    }
-                })
-                .fail(function(xhr) {
-                    showAlert(
-                        xhr.responseJSON?.message || 'Failed to remove screenshot',
-                        'error'
-                    );
-                })
-                .always(function() {
-                    preloader.stop();
-                });
-        });
+    function ajaxFail(xhr, msg) {
+        showAlert(xhr.responseJSON?.message || msg, 'error');
+    }
 
+
+    /* ================= DELETE TASK ATTACHMENT ================= */
+   $(document).off('click', '.deleteAttachment');
+$(document).on('click', '.deleteAttachment', function (e) {
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const btn = $(this);
+    const attachmentId = btn.data('id');
+    const wrapper = btn.closest('.attachment-thumb');
+
+    if (!attachmentId) {
+        showAlert('Invalid attachment', 'error');
+        return;
+    }
+
+    if (!confirm('Are you sure you want to delete this attachment?')) return;
+
+   
+
+    $.ajax({
+        url: "{{ route('tasks.attachments.delete', ':id') }}".replace(':id', attachmentId),
+        method: 'POST', // 🔥 IMPORTANT: POST, NOT DELETE
+        data: {
+            _token: "{{ csrf_token() }}",
+            _method: 'DELETE' // Laravel-safe delete
+        }
+    })
+    .done(function (res) {
+        if (res && res.success) {
+            wrapper.fadeOut(200, function () {
+                $(this).remove();
+            });
+            showAlert('Attachment deleted successfully', 'success');
+        } else {
+            showAlert(res?.message || 'Delete failed', 'error');
+        }
+    })
+    .fail(function (xhr) {
+        showAlert(
+            xhr.responseJSON?.message || 'Failed to delete attachment',
+            'error'
+        );
+    })
+    .always(function () {
+        preloader.stop();
+    });
+});
 
     /* ================= SUBMIT COMMENT ================= */
-    $(document)
-        .off('submit', '#taskCommentForm')
-        .on('submit', '#taskCommentForm', function(e) {
+    $(document).on('submit', '#taskCommentForm', function (e) {
 
-            e.preventDefault();
+        e.preventDefault();
 
-            const form = this;
-            const formData = new FormData(form);
-
-            if (!formData.get('message') || !formData.get('message').trim()) {
-                showAlert('Comment cannot be empty', 'error');
-                return;
-            }
-
-            preloader.load();
-
-            $.ajax({
-                    url: "{{ route('tasks.comment', $task->id) }}",
-                    type: "POST",
-                    data: formData,
-                    processData: false,
-                    contentType: false
-                })
-                .done(function() {
-                    form.reset();
-                    reloadTaskView({
-                        {
-                            $task - > id
-                        }
-                    }); // ✅ CORRECT
-                })
-                .fail(function(xhr) {
-                    console.error(xhr.responseText);
-                    showAlert(
-                        xhr.responseJSON?.message || 'Failed to add comment',
-                        'error'
-                    );
-                })
-                .always(function() {
-                    preloader.stop();
-                });
-        });
-
-
-    /* ================= REVOKE FORWARD ================= */
-    $(document)
-        .off('click', '.revokeForward')
-        .on('click', '.revokeForward', function() {
-
-            const forwardId = $(this).data('id');
-            if (!confirm('Remove this forwarded department?')) return;
-
-            preloader.load();
-
-            $.ajax({
-                    url: `/tasks/forwards/${forwardId}`,
-                    type: 'DELETE',
-                    data: {
-                        _token: "{{ csrf_token() }}"
-                    }
-                })
-                .done(function() {
-                    reloadTaskView({
-                        {
-                            $task - > id
-                        }
-                    }); // ✅ CORRECT
-                })
-                .fail(function() {
-                    showAlert('Failed to remove forward', 'error');
-                })
-                .always(function() {
-                    preloader.stop();
-                });
-        });
-
-
-    /* ================= RELOAD TASK VIEW ================= */
-    function reloadTaskView(taskId) {
-
-        if (!taskId) {
-            console.error('reloadTaskView called without taskId');
+        const formData = new FormData(this);
+        if (!formData.get('message')?.trim()) {
+            showAlert('Comment cannot be empty', 'error');
             return;
         }
 
         preloader.load();
 
-        $.get(`/tasks/${taskId}?view=1`)
-            .done(function(html) {
-                $('#offcanvasCustomBody').html(html);
-            })
-            .fail(function() {
-                showAlert('Failed to reload task view', 'error');
-            })
-            .always(function() {
-                preloader.stop();
-            });
-    }
+        $.ajax({
+            url: "{{ route('tasks.comment', $task->id) }}",
+            type: 'POST',
+            data: formData,
+            processData: false,
+            contentType: false
+        })
+        .done(() => {
+            this.reset();
+            reloadTaskView();
+        })
+        .fail(xhr => ajaxFail(xhr, 'Failed to add comment'))
+        .always(() => preloader.stop());
+    });
+
+
+    /* ================= DELETE FORWARD ================= */
+   
+$(document).off('click', '.revokeForward');
+$(document).on('click', '.revokeForward', function (e) {
+
+    e.preventDefault();
+    e.stopPropagation();
+
+    const btn = $(this);
+    const forwardId = btn.data('id');
+    const badge = btn.closest('.forward-badge');
+
+    if (!confirm('Do you want to remove this forward?')) return;
+
+    
+
+    $.ajax({
+        url: `/tasks/forwards/${forwardId}`,
+        type: 'DELETE',
+        headers: {
+            'X-CSRF-TOKEN': CSRF
+        }
+    })
+    .done(function (res) {
+
+        if (!res.success) {
+            showAlert('Failed to delete forward', 'error');
+            return;
+        }
+
+        // 🔥 REMOVE FORWARD BADGE INSTANTLY
+        badge.fadeOut(200, function () {
+            $(this).remove();
+        });
+
+        showAlert('Forward removed', 'success');
+
+        // 🔥 INSTANT ACTIVITY APPEND
+        if (res.activity) {
+            $('.activity-timeline').prepend(`
+                <div class="activity-item d-flex gap-3">
+                    <div class="activity-avatar">
+                        ${res.activity.user.charAt(0).toUpperCase()}
+                    </div>
+                    <div class="flex-grow-1">
+                        <div class="d-flex justify-content-between">
+                            <span class="activity-user">${res.activity.user}</span>
+                            <span class="activity-time">${res.activity.time}</span>
+                        </div>
+                        <div class="activity-message">
+                            ${res.activity.message}
+                        </div>
+                    </div>
+                </div>
+            `);
+        }
+    })
+    .fail(function () {
+        showAlert('Failed to delete forward', 'error');
+    })
+    .always(function () {
+        preloader.stop();
+    });
+});
+
+
+
+    /* ================= INLINE STATUS EDIT ================= */
+    $(document).on('click', '.toggleStatusEdit', function () {
+        const wrapper = $(this).closest('.inline-edit-wrapper');
+        wrapper.find('.status-badge').addClass('d-none');
+        wrapper.find('.status-select').removeClass('d-none').focus();
+    });
+
+    $(document).on('change', '.status-select', function () {
+
+        const taskId = $(this).data('task-id');
+        const statusId = $(this).val();
+
+        preloader.load();
+
+        $.post(`/tasks/${taskId}/status-inline`, {
+            _token: CSRF,
+            task_status_id: statusId
+        })
+        .done(() => reloadTaskView())
+        .fail(() => showAlert('Failed to update status', 'error'))
+        .always(() => preloader.stop());
+    });
+
+
+    /* ================= INLINE PRIORITY EDIT ================= */
+    $(document).on('click', '.togglePriorityEdit', function () {
+        const wrapper = $(this).closest('.inline-edit-wrapper');
+        wrapper.find('.priority-badge').addClass('d-none');
+        wrapper.find('.priority-select').removeClass('d-none').focus();
+    });
+
+    $(document).on('change', '.priority-select', function () {
+
+        const taskId = $(this).data('task-id');
+        const priorityId = $(this).val();
+
+        preloader.load();
+
+        $.post(`/tasks/${taskId}/priority-inline`, {
+            _token: CSRF,
+            task_priority_id: priorityId
+        })
+        .done(() => reloadTaskView())
+        .fail(() => showAlert('Failed to update priority', 'error'))
+        .always(() => preloader.stop());
+    });
+
+
+    /* ================= REMOVE ASSIGNED USER (INSTANT) ================= */
+$(document).on('click', '.deleteAssignee', function () {
+
+    const btn = $(this);
+    const badge = btn.closest('.badge');
+    const taskId = btn.data('task');
+    const userId = btn.data('user');
+
+    if (!confirm('Remove this user from task?')) return;
+
+    
+
+    $.ajax({
+        url: `/tasks/${taskId}/assignees/${userId}`,
+        type: 'DELETE',
+        data: { _token: CSRF }
+    })
+    .done(() => {
+        badge.fadeOut(200, function () {
+            $(this).remove();
+        });
+        showAlert('User removed', 'success');
+    })
+    .fail(() => showAlert('Failed to remove user', 'error'))
+    .always(() => preloader.stop());
+});
 </script>
+
+
 
 @endsection

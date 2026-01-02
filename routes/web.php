@@ -113,41 +113,47 @@ Route::middleware(['auth', 'verified', 'check_url_access'])->group(function () {
    Route::get('/reset_core', [HomeController::class, 'reset_core'])->name('reset_core');
 
 
+   Route::post('/tasks/{task}/status-inline', [TaskController::class, 'updateStatusInline']);
+Route::post('/tasks/{task}/priority-inline', [TaskController::class, 'updatePriorityInline']);
 
-    /*
-    |--------------------------------------------------------------------------
-    | TASK MANAGEMENT
-    |--------------------------------------------------------------------------
-    */
-    Route::get('/tasks/list', [TaskController::class, 'list'])->name('tasks.list');
-    Route::get('/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
-    Route::post('/tasks/store', [TaskController::class, 'store'])->name('tasks.store');
-    Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
-    Route::post('/tasks/delete', [TaskController::class, 'delete'])->name('tasks.delete');
 
-    Route::post('/tasks/{task}/comment', [TaskController::class, 'comment'])->name('tasks.comment');
-    Route::post('/tasks/{task}/attachment', [TaskController::class, 'uploadAttachment'])->name('tasks.attachment');
 
-    Route::post('/tasks/{task}/subtasks', [TaskController::class, 'storeSubTask'])->name('tasks.subtasks.store');
-    Route::patch('/tasks/subtasks/{subtask}', [TaskController::class, 'updateSubTask'])->name('tasks.subtasks.update');
-    Route::post('/tasks/subtasks/{subtask}/status', [TaskController::class, 'changeSubTaskStatus'])->name('tasks.subtasks.change_status');
-    Route::delete('/tasks/subtasks/{subtask}',[TaskController::class, 'deleteSubTask'])->name('tasks.subtasks.delete');
-    
-    Route::post('/tasks/{task}/comment', [TaskController::class, 'comment'])->name('tasks.comment');
-    Route::post('/tasks/{task}/status', [TaskController::class, 'updateStatus']) ->name('tasks.updateStatus');
 
-    Route::post('/tasks/{task}/priority', [TaskController::class, 'updatePriority'])->name('tasks.updatePriority');
+   /*
+   |--------------------------------------------------------------------------
+   | TASK MANAGEMENT
+   |--------------------------------------------------------------------------
+   */
+   Route::get('/tasks/list', [TaskController::class, 'list'])->name('tasks.list');
+   Route::get('/tasks/create', [TaskController::class, 'create'])->name('tasks.create');
+   Route::post('/tasks/store', [TaskController::class, 'store'])->name('tasks.store');
+   Route::get('/tasks/{task}', [TaskController::class, 'show'])->name('tasks.show');
+   Route::post('/tasks/delete', [TaskController::class, 'delete'])->name('tasks.delete');
 
-    Route::post('/tasks/{task}/forward',  [TaskController::class, 'forward'])->name('tasks.forward');
-    Route::delete('/tasks/forwards/{forward}', [TaskController::class, 'deleteForward']);
+   Route::post('/tasks/{task}/comment', [TaskController::class, 'comment'])->name('tasks.comment');
+   Route::post('/tasks/{task}/attachment', [TaskController::class, 'uploadAttachment'])->name('tasks.attachment');
 
-    Route::delete('/task-attachments/{attachment}', [TaskController::class, 'deleteAttachment'])->name('tasks.attachments.delete');
+   Route::post('/tasks/{task}/subtasks', [TaskController::class, 'storeSubTask'])->name('tasks.subtasks.store');
+   Route::patch('/tasks/subtasks/{subtask}', [TaskController::class, 'updateSubTask'])->name('tasks.subtasks.update');
+   Route::post('/tasks/subtasks/{subtask}/status', [TaskController::class, 'changeSubTaskStatus'])->name('tasks.subtasks.change_status');
+   Route::delete('/tasks/subtasks/{subtask}', [TaskController::class, 'deleteSubTask'])->name('tasks.subtasks.delete');
+
+   Route::post('/tasks/{task}/comment', [TaskController::class, 'comment'])->name('tasks.comment');
+   Route::post('/tasks/{task}/status', [TaskController::class, 'updateStatus'])->name('tasks.updateStatus');
+
+   Route::post('/tasks/{task}/priority', [TaskController::class, 'updatePriority'])->name('tasks.updatePriority');
+
+   Route::post('/tasks/{task}/forward', [TaskController::class, 'forward'])->name('tasks.forward');
+   Route::delete('/tasks/forwards/{forward}', [TaskController::class, 'deleteForward']);
+
+   Route::delete('/task-attachments/{attachment}', [TaskController::class, 'deleteAttachment'])->name('tasks.attachments.delete');
+
+   Route::delete('/task-attachments/{id}', [TaskController::class, 'deleteAttachment'])->name('tasks.attachments.delete');
 
 Route::delete(
-    '/task-attachments/{id}',
-    [TaskController::class, 'deleteAttachment']
-)->name('tasks.attachments.delete');
-
+    '/tasks/{task}/assignees/{user}',
+    [TaskController::class, 'removeAssignee']
+);
 
 
 

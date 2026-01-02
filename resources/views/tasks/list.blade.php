@@ -50,9 +50,18 @@
                 @endforeach
             </select>
 
+           {{-- DATE --}}
+            <input type="date"
+                class="form-control form-control-sm taskFilter filter-sm"
+                data-name="date"
+                title="Created date">
+
+
+
             <button class="btn btn-sm btn-light border" id="resetFilters">
                 Reset
             </button>
+            
 
         </div>
 
@@ -76,40 +85,45 @@
 </style>
 
 <script>
+ let filterTimer = null;
 
-let filterTimer = null;
-
-/* ================= LOAD TASKS (AJAX ONLY) ================= */
+/* ================= LOAD TASKS (FINAL FIX) ================= */
 function loadTasks(page = 1) {
+
     const params = {
         filter: 1,
-        status: $('[data-name="status"]').val(),
-        priority: $('[data-name="priority"]').val(),
-        owner: $('[data-name="owner"]').val(),
-        search: $('.taskSearch').val(),
+        status: $('[data-name="status"]').val() || '',
+        priority: $('[data-name="priority"]').val() || '',
+        owner: $('[data-name="owner"]').val() || '',
+        date: $('[data-name="date"]').val() || '',
+        search: $('.taskSearch').val() || '',
         page: page
     };
 
     preloader.load();
 
-    $.get("{{ route('tasks.list') }}", params)
-        .done(function (html) {
-            $('#taskTable').html(html);
+    $.ajax({
+        url: "{{ route('tasks.list') }}",
+        type: "GET",
+        data: params,
+        cache: false
+    })
+    .done(function (html) {
 
-            // re-init tooltips
-            document
-                .querySelectorAll('#taskTable [data-bs-toggle="tooltip"]')
-                .forEach(el => new bootstrap.Tooltip(el));
-        })
-        .always(() => preloader.stop());
+        /* 🔥 THIS IS THE FIX */
+        $('#taskTable').html(html);
+
+        /* re-init tooltips */
+        document
+            .querySelectorAll('#taskTable [data-bs-toggle="tooltip"]')
+            .forEach(el => bootstrap.Tooltip.getOrCreateInstance(el));
+    })
+    .fail(() => showAlert('Failed to reload task list', 'error'))
+    .always(() => preloader.stop());
 }
 
-
-
 /* ================= FILTER EVENTS ================= */
-$(document).on('change', '.taskFilter', function () {
-    loadTasks(1);
-});
+$(document).on('change', '.taskFilter', () => loadTasks(1));
 
 $(document).on('keyup', '.taskSearch', function () {
     clearTimeout(filterTimer);
@@ -122,18 +136,12 @@ $(document).on('click', '#resetFilters', function () {
     loadTasks(1);
 });
 
-
-
-
-
 /* ================= PAGINATION ================= */
 $(document).on('click', '#taskTable .pagination a', function (e) {
     e.preventDefault();
     const page = new URL(this.href).searchParams.get('page');
     loadTasks(page);
 });
-
-
 
 /* ================= CREATE TASK (OFFCANVAS) ================= */
 $(document).on('click', '#openCreateTask', function (e) {
@@ -142,27 +150,21 @@ $(document).on('click', '#openCreateTask', function (e) {
     preloader.load();
 
     $.get("{{ route('tasks.create') }}")
-        .done(function (response) {
-            const offcanvasEl = document.getElementById('offcanvasCustom');
-            const oc = new bootstrap.Offcanvas(offcanvasEl);
+        .done(response => {
+            const ocEl = document.getElementById('offcanvasCustom');
+            const oc = bootstrap.Offcanvas.getOrCreateInstance(ocEl);
 
             $('#offcanvasCustomHead').html('Create Task');
             $('#offcanvasCustomBody').html(response);
-
             oc.show();
 
-            setTimeout(() => {
-                $('.selectpicker').selectpicker('refresh');
-            }, 100);
+            setTimeout(() => $('.selectpicker').selectpicker('refresh'), 100);
         })
         .fail(() => showAlert('Unable to load Create Task form', 'error'))
         .always(() => preloader.stop());
 });
 
-
-
-
-/* ================= SAVE TASK ================= */
+/* ================= SAVE TASK (🔥 FIXED) ================= */
 $(document)
     .off('submit.taskSave')
     .on('submit.taskSave', '#taskCreateForm', function (e) {
@@ -170,8 +172,6 @@ $(document)
         e.preventDefault();
 
         const form = this;
-        const data = new FormData(form);
-
         if ($(form).data('loading')) return;
         $(form).data('loading', true);
 
@@ -180,37 +180,32 @@ $(document)
         $.ajax({
             url: "{{ route('tasks.store') }}",
             method: "POST",
-            data: data,
+            data: new FormData(form),
             processData: false,
-            contentType: false,
+            contentType: false
         })
         .done(() => {
 
-            // close offcanvas
+            /* CLOSE OFFCANVAS */
             const ocEl = document.getElementById('offcanvasCustom');
-            if (ocEl) {
-                const oc = bootstrap.Offcanvas.getInstance(ocEl);
-                oc?.hide();
-            }
+            bootstrap.Offcanvas.getInstance(ocEl)?.hide();
 
-            // show success modal
+            /* 🔥 INSTANT TABLE REFRESH */
+            loadTasks(1);
+
+            /* SUCCESS MODAL */
             $('#modal_title_custom').text('Success');
-            $('#modal_body_custom').html(
-                '<p class="mb-0">Task saved successfully.</p>'
-            );
-
-            const modalEl = document.getElementById('modal_custom');
-            const modal = new bootstrap.Modal(modalEl);
-            modal.show();
+            $('#modal_body_custom').html('<p class="mb-0">Task saved successfully.</p>');
+            bootstrap.Modal.getOrCreateInstance(
+                document.getElementById('modal_custom')
+            ).show();
         })
         .fail(xhr => {
-
             $('#modal_title_custom_error').text('Error');
             $('#modal_body_custom_error').html(
                 `<p class="mb-0">${xhr.responseJSON?.message || 'Save failed'}</p>`
             );
-
-            new bootstrap.Modal(
+            bootstrap.Modal.getOrCreateInstance(
                 document.getElementById('modal_custom_error')
             ).show();
         })
@@ -219,16 +214,8 @@ $(document)
             $(form).data('loading', false);
         });
 });
-
-
-
-
-
-/* ================= REFRESH LIST AFTER MODAL CLOSE ================= */
-$('#modal_custom').on('hidden.bs.modal', function () {
-    loadTasks(1);
-});
 </script>
+
 
 
 

@@ -92,26 +92,6 @@
                     <textarea name="description" class="form-control" rows="3"></textarea>
                 </div>
 
-                <div class="row">
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Status <span class="text-danger">*</span></label>
-                        <select name="task_status_id" class="form-select" required>
-                            @foreach(\App\Models\TaskStatus::all() as $s)
-                            <option value="{{ $s->id }}">{{ $s->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-
-                    <div class="col-md-6 mb-3">
-                        <label class="form-label">Priority <span class="text-danger">*</span></label>
-                        <select name="task_priority_id" class="form-select" required>
-                            @foreach(\App\Models\TaskPriority::all() as $p)
-                            <option value="{{ $p->id }}">{{ $p->name }}</option>
-                            @endforeach
-                        </select>
-                    </div>
-                </div>
-
                 <div class="mb-3">
                     <label class="form-label">Due Date</label>
                     <input type="date" name="due_at" class="form-control">
@@ -302,38 +282,45 @@ $(document).on('click', '.editSubTask', function() {
 });
 
 // SAVE (CREATE + UPDATE)
-$(document)
-    .off('submit', '#subTaskForm')
-    .on('submit', '#subTaskForm', function(e) {
-        e.preventDefault();
+$(document).on('submit', '#subTaskForm', function (e) {
+    e.preventDefault();
 
-        const form = $(this);
-        const taskId = form.find('[name="task_id"]').val();
-        const subtaskId = form.find('[name="subtask_id"]').val();
+    const form = $(this);
+    const taskId = form.find('[name="task_id"]').val();
+    const subtaskId = form.find('[name="subtask_id"]').val();
 
-        let url = `/tasks/${taskId}/subtasks`;
-        let data = form.serialize();
+    let url = `/tasks/${taskId}/subtasks`;
+    let data = form.serialize();
 
-        if (subtaskId) {
-            url = `/tasks/subtasks/${subtaskId}`;
-            data += '&_method=PATCH';
-        }
+    if (subtaskId) {
+        url = `/tasks/subtasks/${subtaskId}`;
+        data += '&_method=PATCH';
+    }
 
-        preloader.load();
+    preloader.load();
 
-        $.post(url, data)
-            .done(() => {
-                bootstrap.Modal.getInstance(
-                    document.getElementById('subTaskModal')
-                ).hide();
-                form[0].reset();
-                reloadTaskView(taskId);
-            })
-            .fail(xhr => {
-                showAlert(xhr.responseJSON?.message || 'Failed to save sub-task', 'error');
-            })
-            .always(() => preloader.stop());
-    });
+    $.post(url, data)
+        .done(res => {
+            const modal = bootstrap.Modal.getInstance(
+                document.getElementById('subTaskModal')
+            );
+            modal.hide();
+
+            if (subtaskId) {
+                updateSubTaskRow(res.data);
+            } else {
+                appendSubTaskRow(res.data);
+            }
+
+            form[0].reset();
+            form.find('[name="subtask_id"]').val('');
+        })
+        .fail(xhr => {
+            showAlert(xhr.responseJSON?.message || 'Failed to save sub-task', 'error');
+        })
+        .always(() => preloader.stop());
+});
+
 
 // DELETE
 $(document).on('click', '.deleteSubTask', function() {
@@ -353,4 +340,47 @@ $(document).on('click', '.deleteSubTask', function() {
     .fail(() => showAlert('Failed to delete sub-task', 'error'))
     .always(() => preloader.stop());
 });
+
+
+
+function appendSubTaskRow(sub) {
+    const row = `
+    <tr id="subtask-row-${sub.id}">
+        <td class="subtask-title-cell">
+            <button class="btn btn-link p-0 text-start editSubTask"
+                data-id="${sub.id}"
+                data-title="${sub.title}"
+                data-description="${sub.description || ''}"
+                data-due="${sub.due_at || ''}">
+                ${sub.title}
+            </button>
+            ${sub.description ? `<div class="subtask-desc text-muted">${sub.description}</div>` : ''}
+        </td>
+        <td>${sub.owner?.name ?? '—'}</td>
+        <td>${sub.due_at ?? '—'}</td>
+        <td>
+            <button class="btn btn-sm btn-outline-danger deleteSubTask"
+                data-id="${sub.id}">
+                🗑
+            </button>
+        </td>
+    </tr>`;
+    $('.subtask-table tbody').append(row);
+}
+
+function updateSubTaskRow(sub) {
+    const row = $(`#subtask-row-${sub.id}`);
+
+    row.find('.editSubTask')
+        .text(sub.title)
+        .data('title', sub.title)
+        .data('description', sub.description || '');
+
+    row.find('.subtask-desc').remove();
+
+    if (sub.description) {
+        row.find('.subtask-title-cell')
+            .append(`<div class="subtask-desc text-muted">${sub.description}</div>`);
+    }
+}
 </script>

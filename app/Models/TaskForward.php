@@ -10,8 +10,9 @@ class TaskForward extends Model
     protected $fillable = [
         'task_id',
         'department_id',
+        'user_id',
         'forwarded_by',
-        'message',
+        'follow_up_date',
     ];
 
     public function department()
@@ -21,6 +22,7 @@ class TaskForward extends Model
 
     public function user()
     {
-        return $this->belongsTo(User::class, 'forwarded_by');
+        return $this->belongsTo(User::class);
     }
 }
+

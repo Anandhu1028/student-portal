@@ -10,16 +10,15 @@
     @csrf
 
     @if(isset($task))
-    <input type="hidden" name="id" value="{{ $task->id }}">
+        <input type="hidden" name="id" value="{{ $task->id }}">
     @endif
 
     @php
-    $isEdit = isset($task);
-
-    $assignedIds = old(
-    'assignees',
-    $isEdit ? $task->assignees->pluck('id')->toArray() : []
-    );
+        $isEdit = isset($task);
+        $assignedIds = old(
+            'assignees',
+            $isEdit ? $task->assignees->pluck('id')->toArray() : []
+        );
     @endphp
 
     <div class="card">
@@ -36,6 +35,7 @@
                     <input type="text"
                         name="title"
                         class="form-control form-control-sm"
+                        placeholder="Eg: Payment verification pending"
                         required
                         value="{{ old('title', $task->title ?? '') }}">
                 </div>
@@ -60,12 +60,12 @@
                     <select name="task_status_id"
                         class="form-select form-select-sm"
                         required>
-                        <option value="">Select status</option>
+                        <option value="">Select task status</option>
                         @foreach($statuses as $s)
-                        <option value="{{ $s->id }}"
-                            {{ old('task_status_id', $task->task_status_id ?? '') == $s->id ? 'selected' : '' }}>
-                            {{ $s->name }}
-                        </option>
+                            <option value="{{ $s->id }}"
+                                {{ old('task_status_id', $task->task_status_id ?? '') == $s->id ? 'selected' : '' }}>
+                                {{ $s->name }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -76,12 +76,12 @@
                     <select name="task_priority_id"
                         class="form-select form-select-sm"
                         required>
-                        <option value="">Select priority</option>
+                        <option value="">Select priority level</option>
                         @foreach($priorities as $p)
-                        <option value="{{ $p->id }}"
-                            {{ old('task_priority_id', $task->task_priority_id ?? '') == $p->id ? 'selected' : '' }}>
-                            {{ $p->name }}
-                        </option>
+                            <option value="{{ $p->id }}"
+                                {{ old('task_priority_id', $task->task_priority_id ?? '') == $p->id ? 'selected' : '' }}>
+                                {{ $p->name }}
+                            </option>
                         @endforeach
                     </select>
                 </div>
@@ -92,32 +92,31 @@
                     <input type="date"
                         name="due_at"
                         class="form-control form-control-sm"
+                        placeholder="Select due date"
                         value="{{ old(
-                                'due_at',
-                                isset($task->due_at)
-                                    ? \Carbon\Carbon::parse($task->due_at)->format('Y-m-d')
-                                    : ''
-                           ) }}">
+                            'due_at',
+                            isset($task->due_at)
+                                ? \Carbon\Carbon::parse($task->due_at)->format('Y-m-d')
+                                : ''
+                        ) }}">
                 </div>
 
-                {{-- ASSIGNEES (FIXED) --}}
+                {{-- ASSIGNEES --}}
                 <div class="col-md-6">
                     <label class="form-label">Assigned Users</label>
-
                     <select name="assignees[]"
                         class="form-control form-control-sm selectpicker"
                         multiple
                         data-live-search="true"
                         data-actions-box="true"
-                        data-width="100%">
-
+                        data-width="100%"
+                        title="Select users to assign this task">
                         @foreach($users as $u)
-                        <option value="{{ $u->id }}"
-                            {{ in_array($u->id, $assignedIds) ? 'selected' : '' }}>
-                            {{ $u->name }}
-                        </option>
+                            <option value="{{ $u->id }}"
+                                {{ in_array($u->id, $assignedIds) ? 'selected' : '' }}>
+                                {{ $u->name }}
+                            </option>
                         @endforeach
-
                     </select>
                 </div>
 
@@ -126,10 +125,11 @@
                     <label class="form-label">Description</label>
                     <textarea name="description"
                         class="form-control form-control-sm"
-                        rows="3">{{ old('description', $task->description ?? '') }}</textarea>
+                        rows="3"
+                        placeholder="Describe the issue, requirements, or action needed...">{{ old('description', $task->description ?? '') }}</textarea>
                 </div>
 
-
+                {{-- ATTACHMENTS --}}
                 <div class="col-12">
                     <label class="form-label">Screenshots / Attachments</label>
                     <input type="file"
@@ -137,38 +137,45 @@
                         class="form-control form-control-sm"
                         multiple
                         accept="image/*">
-                    <small class="text-muted">PNG, JPG, max 10MB each</small>
+                    <small class="text-muted">
+                        Upload screenshots or proofs (PNG, JPG — max 10MB each)
+                    </small>
                 </div>
 
-
             </div>
-        </div>
-
-        <div class="card-footer text-end">
-            <button type="submit" class="btn btn-sm btn-primary">
-                {{ $isEdit ? 'Update Task' : 'Save Task' }}
-            </button>
-
         </div>
     </div>
 </form>
 
+
 <script>
-    setTimeout(function() {
+$(function () {
 
-        const $picker = $('.selectpicker');
-
-        if ($picker.data('selectpicker')) {
-            $picker.selectpicker('destroy');
-        }
-
-        $picker.selectpicker({
+    // init selectpicker
+    const $picker = $('.selectpicker');
+    if ($picker.length) {
+        $picker.selectpicker('destroy').selectpicker({
             liveSearch: true,
             actionsBox: true,
             width: '100%'
         });
+    }
 
-    }, 150);
+    // footer button (create[save] / edit[update])
+    $('#offcanvasCustomFooter').html(`
+        <button class="btn btn-sm btn-primary" onclick="submitTaskForm()">
+            {{ isset($task) ? 'Update Task' : 'Save Task' }}
+        </button>
+    `);
+});
+
+// submit handler
+function submitTaskForm() {
+    $('#taskCreateForm').trigger('submit');
+}
+
+
 </script>
+
 
 @endsection
