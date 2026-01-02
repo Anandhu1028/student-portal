@@ -33,7 +33,6 @@ class TaskController extends Controller
     public function list(Request $request)
     {
         $user = auth()->user();
-
         $isSuperAdmin = $user->role?->role_name === 'Super Admin';
 
         $tasks = Task::with([
@@ -41,53 +40,40 @@ class TaskController extends Controller
             'priority',
             'owner:id,name',
             'assignees:id,name',
-            'attachments:id,task_id'
+            'attachments:id,task_id,file_path,original_name',
         ])
-
-            // ROLE-BASED VISIBILITY
-            ->when(
-                !$isSuperAdmin,
-                function ($q) use ($user) {
-                    $q->where(function ($q) use ($user) {
-                        $q->where('task_owner_id', $user->id)
-                            ->orWhereHas('assignees', function ($a) use ($user) {
-                                $a->where('users.id', $user->id);
-                            });
-                    });
-                }
-            )
-
-            // FILTERS
+            ->when(!$isSuperAdmin, function ($q) use ($user) {
+                $q->where(function ($q) use ($user) {
+                    $q->where('task_owner_id', $user->id)
+                        ->orWhereHas(
+                            'assignees',
+                            fn($a) =>
+                            $a->where('users.id', $user->id)
+                        );
+                });
+            })
             ->when(
                 $request->status,
                 fn($q) =>
                 $q->where('task_status_id', $request->status)
             )
-
             ->when(
                 $request->priority,
                 fn($q) =>
                 $q->where('task_priority_id', $request->priority)
             )
-
             ->when(
                 $request->owner,
                 fn($q) =>
                 $q->where('task_owner_id', $request->owner)
             )
-
-            /* SINGLE DATE FILTER */
             ->when(
                 $request->date,
                 fn($q) =>
                 $q->whereDate('created_at', $request->date)
             )
-
-            /* DATATABLE-LIKE SEARCH */
             ->when($request->search, function ($q) use ($request) {
-
                 $search = $request->search;
-
                 $q->where(function ($q) use ($search) {
                     $q->where('title', 'like', "%{$search}%")
                         ->orWhere('description', 'like', "%{$search}%")
@@ -103,25 +89,29 @@ class TaskController extends Controller
                         );
                 });
             })
-
             ->latest()
             ->paginate(15);
 
-
         $departments = Departments::orderBy('name')->get();
+        $users = User::orderBy('name')->get();
 
         if ($request->ajax() && $request->has('filter')) {
-            return view('tasks.partials.table', compact('tasks', 'departments'));
+            return view('tasks.partials.table', compact(
+                'tasks',
+                'departments',
+                'users'
+            ));
         }
 
         return view('tasks.list', [
-            'tasks'       => $tasks,
-            'statuses'    => TaskStatus::all(),
-            'priorities'  => TaskPriority::all(),
-            'users'       => User::orderBy('name')->get(),
+            'tasks' => $tasks,
+            'statuses' => TaskStatus::all(),
+            'priorities' => TaskPriority::all(),
+            'users' => $users,
             'departments' => $departments,
         ]);
     }
+
 
 
     /* =========================================================
@@ -139,10 +129,10 @@ class TaskController extends Controller
         }
 
         return view('tasks.create', [
-            'task'       => $task,
-            'statuses'   => TaskStatus::all(),
+            'task' => $task,
+            'statuses' => TaskStatus::all(),
             'priorities' => TaskPriority::all(),
-            'users'      => User::orderBy('name')->get(),
+            'users' => User::orderBy('name')->get(),
         ]);
     }
 
@@ -152,44 +142,44 @@ class TaskController extends Controller
     public function store(Request $request)
     {
         $validated = $request->validate([
-            'id'               => 'nullable|exists:tasks,id',
-            'title'            => 'required|string|max:255',
-            'description'      => 'nullable|string',
-            'task_status_id'   => 'required|exists:task_statuses,id',
+            'id' => 'nullable|exists:tasks,id',
+            'title' => 'required|string|max:255',
+            'description' => 'nullable|string',
+            'task_status_id' => 'required|exists:task_statuses,id',
             'task_priority_id' => 'required|exists:task_priorities,id',
-            'task_owner_id'    => 'required|exists:users,id',
-            'assignees'        => 'nullable|array',
-            'assignees.*'      => 'exists:users,id',
-            'due_at'           => 'nullable|date',
-            'attachments.*'    => 'nullable|image|max:10240',
+            'task_owner_id' => 'required|exists:users,id',
+            'assignees' => 'nullable|array',
+            'assignees.*' => 'exists:users,id',
+            'due_at' => 'nullable|date',
+            'attachments.*' => 'nullable|image|max:10240',
         ]);
 
         DB::beginTransaction();
 
         try {
 
-            $isUpdate = isset($validated['id']);
-            $task = $isUpdate ? Task::findOrFail($validated['id']) : new Task();
+            $isUpdate = !empty($validated['id']);
+            $task = $isUpdate
+                ? Task::findOrFail($validated['id'])
+                : new Task();
 
-            /* ================= SNAPSHOT BEFORE SAVE ================= */
-
+            /* ===== SNAPSHOT BEFORE SAVE ===== */
             $old = $task->exists ? [
-                'title'            => $task->title,
-                'description'      => $task->description,
-                'task_status_id'   => $task->task_status_id,
+                'title' => $task->title,
+                'description' => $task->description,
+                'task_status_id' => $task->task_status_id,
                 'task_priority_id' => $task->task_priority_id,
-                'due_at'           => optional($task->due_at)->format('Y-m-d'),
+                'due_at' => optional($task->due_at)->format('Y-m-d'),
             ] : [];
 
-            /* ================= SAVE TASK ================= */
-
+            /* ===== SAVE TASK ===== */
             $task->fill([
-                'title'            => $validated['title'],
-                'description'      => $validated['description'] ?? null,
-                'task_status_id'   => $validated['task_status_id'],
+                'title' => $validated['title'],
+                'description' => $validated['description'] ?? null,
+                'task_status_id' => $validated['task_status_id'],
                 'task_priority_id' => $validated['task_priority_id'],
-                'task_owner_id'    => $validated['task_owner_id'],
-                'due_at'           => $validated['due_at'] ?? null,
+                'task_owner_id' => $validated['task_owner_id'],
+                'due_at' => $validated['due_at'] ?? null,
             ]);
 
             if (!$isUpdate) {
@@ -198,8 +188,7 @@ class TaskController extends Controller
 
             $task->save();
 
-            /* ================= ASSIGNEES ================= */
-
+            /* ===== ASSIGNEES ===== */
             $oldAssignees = TaskRelation::where('task_id', $task->id)
                 ->where('relation_type', 'assignee')
                 ->pluck('related_id')
@@ -207,7 +196,7 @@ class TaskController extends Controller
 
             $newAssignees = $validated['assignees'] ?? [];
 
-            $added   = array_diff($newAssignees, $oldAssignees);
+            $added = array_diff($newAssignees, $oldAssignees);
             $removed = array_diff($oldAssignees, $newAssignees);
 
             if ($added || $removed) {
@@ -218,69 +207,68 @@ class TaskController extends Controller
 
                 foreach ($newAssignees as $uid) {
                     TaskRelation::create([
-                        'task_id'       => $task->id,
-                        'related_type'  => User::class,
-                        'related_id'    => $uid,
+                        'task_id' => $task->id,
+                        'related_type' => User::class,
+                        'related_id' => $uid,
                         'relation_type' => 'assignee',
                     ]);
                 }
 
                 if ($added) {
                     TaskActivity::create([
-                        'task_id'  => $task->id,
+                        'task_id' => $task->id,
                         'actor_id' => auth()->id(),
-                        'message'  => "Assigned users:\n" .
+                        'message' => "Assigned users:\n" .
                             User::whereIn('id', $added)->pluck('name')->join(', '),
                     ]);
                 }
 
                 if ($removed) {
                     TaskActivity::create([
-                        'task_id'  => $task->id,
+                        'task_id' => $task->id,
                         'actor_id' => auth()->id(),
-                        'message'  => "Removed users:\n" .
+                        'message' => "Removed users:\n" .
                             User::whereIn('id', $removed)->pluck('name')->join(', '),
                     ]);
                 }
             }
 
-            /* ================= FIELD CHANGES ================= */
-
+            /* ===== FIELD CHANGES ===== */
             if ($isUpdate) {
 
-                if ($old['title'] !== $task->title) {
+                if (($old['title'] ?? '') !== $task->title) {
                     TaskActivity::create([
-                        'task_id'  => $task->id,
+                        'task_id' => $task->id,
                         'actor_id' => auth()->id(),
-                        'message'  => "Title changed to:\n{$task->title}",
+                        'message' => "Title changed to:\n{$task->title}",
                     ]);
                 }
 
                 if (($old['description'] ?? '') !== ($task->description ?? '')) {
                     TaskActivity::create([
-                        'task_id'  => $task->id,
+                        'task_id' => $task->id,
                         'actor_id' => auth()->id(),
-                        'message'  => "Description updated:\n{$task->description}",
+                        'message' => "Description updated:\n{$task->description}",
                     ]);
                 }
 
-                if ($old['task_status_id'] != $task->task_status_id) {
+                if (($old['task_status_id'] ?? null) != $task->task_status_id) {
                     TaskActivity::create([
-                        'task_id'  => $task->id,
+                        'task_id' => $task->id,
                         'actor_id' => auth()->id(),
-                        'message'  =>
-                        "Status changed\nFrom: " .
+                        'message' =>
+                            "Status changed\nFrom: " .
                             TaskStatus::find($old['task_status_id'])->name .
                             "\nTo: " . $task->status->name,
                     ]);
                 }
 
-                if ($old['task_priority_id'] != $task->task_priority_id) {
+                if (($old['task_priority_id'] ?? null) != $task->task_priority_id) {
                     TaskActivity::create([
-                        'task_id'  => $task->id,
+                        'task_id' => $task->id,
                         'actor_id' => auth()->id(),
-                        'message'  =>
-                        "Priority changed\nFrom: " .
+                        'message' =>
+                            "Priority changed\nFrom: " .
                             TaskPriority::find($old['task_priority_id'])->name .
                             "\nTo: " . $task->priority->name,
                     ]);
@@ -288,50 +276,47 @@ class TaskController extends Controller
 
                 if (($old['due_at'] ?? null) !== optional($task->due_at)->format('Y-m-d')) {
                     TaskActivity::create([
-                        'task_id'  => $task->id,
+                        'task_id' => $task->id,
                         'actor_id' => auth()->id(),
-                        'message'  =>
-                        "Due date changed\nTo: " .
+                        'message' =>
+                            "Due date changed\nTo: " .
                             optional($task->due_at)->format('d M Y'),
                     ]);
                 }
             }
 
-            /* ================= ATTACHMENTS (FIXED) ================= */
-
+            /* ===== ATTACHMENTS ===== */
             if ($request->hasFile('attachments')) {
 
-                $uploadedNames = [];
+                $uploaded = [];
 
                 foreach ($request->file('attachments') as $file) {
                     $path = $file->store('task_attachments', 'public');
 
                     TaskAttachment::create([
-                        'task_id'       => $task->id,
-                        'file_path'     => $path,
+                        'task_id' => $task->id,
+                        'file_path' => $path,
                         'original_name' => $file->getClientOriginalName(),
-                        'uploaded_by'   => auth()->id(),
+                        'uploaded_by' => auth()->id(),
                     ]);
 
-                    $uploadedNames[] = $file->getClientOriginalName();
+                    $uploaded[] = $file->getClientOriginalName();
                 }
 
                 TaskActivity::create([
-                    'task_id'  => $task->id,
+                    'task_id' => $task->id,
                     'actor_id' => auth()->id(),
-                    'message'  => "Uploaded screenshots:\n" .
-                        implode("\n", $uploadedNames),
+                    'message' => "Uploaded screenshots:\n" . implode("\n", $uploaded),
                 ]);
             }
 
-            /* ================= CREATE SNAPSHOT ================= */
-
+            /* ===== CREATE SNAPSHOT ===== */
             if (!$isUpdate) {
                 TaskActivity::create([
-                    'task_id'  => $task->id,
+                    'task_id' => $task->id,
                     'actor_id' => auth()->id(),
-                    'message'  =>
-                    "Created the task\n" .
+                    'message' =>
+                        "Created the task\n" .
                         "Title: {$task->title}\n" .
                         "Description: " . ($task->description ?? '-') . "\n" .
                         "Status: {$task->status->name}\n" .
@@ -344,12 +329,24 @@ class TaskController extends Controller
             }
 
             DB::commit();
-            return response()->json(['success' => true]);
+
+            return response()->json([
+                'success' => true,
+                'message' => $isUpdate
+                    ? 'Task updated successfully'
+                    : 'Task created successfully',
+                'task_id' => $task->id,
+            ]);
+
         } catch (\Throwable $e) {
             DB::rollBack();
-            return response()->json(['message' => $e->getMessage()], 500);
+            return response()->json([
+                'message' => 'Something went wrong',
+                'error' => $e->getMessage()
+            ], 500);
         }
     }
+
 
 
     public function show(Task $task)
@@ -369,7 +366,7 @@ class TaskController extends Controller
             'forwards.user:id,name',
 
             'activities' => fn($q) =>
-            $q->latest()->with(['actor:id,name', 'attachments']),
+                $q->latest()->with(['actor:id,name', 'attachments']),
 
             'activities.actor:id,name',
             'activities.attachments',
@@ -403,150 +400,150 @@ class TaskController extends Controller
         return response()->json(['success' => true]);
     }
 
-   public function deleteAttachment($id)
-{
-    $attachment = TaskAttachment::find($id);
+    public function deleteAttachment($id)
+    {
+        $attachment = TaskAttachment::find($id);
 
-    if (!$attachment) {
-        return response()->json([
-            'message' => 'Attachment not found'
-        ], 404);
-    }
-
-    DB::transaction(function () use ($attachment) {
-
-        if (
-            $attachment->file_path &&
-            Storage::disk('public')->exists($attachment->file_path)
-        ) {
-            Storage::disk('public')->delete($attachment->file_path);
+        if (!$attachment) {
+            return response()->json([
+                'message' => 'Attachment not found'
+            ], 404);
         }
 
-        TaskActivity::create([
-            'task_id'  => $attachment->task_id,
-            'actor_id' => auth()->id(),
-            'message'  => "Removed screenshot:\n{$attachment->original_name}",
-        ]);
+        DB::transaction(function () use ($attachment) {
 
-        $attachment->delete();
-    });
+            if (
+                $attachment->file_path &&
+                Storage::disk('public')->exists($attachment->file_path)
+            ) {
+                Storage::disk('public')->delete($attachment->file_path);
+            }
 
-    return response()->json(['success' => true]);
-}
+            TaskActivity::create([
+                'task_id' => $attachment->task_id,
+                'actor_id' => auth()->id(),
+                'message' => "Removed screenshot:\n{$attachment->original_name}",
+            ]);
+
+            $attachment->delete();
+        });
+
+        return response()->json(['success' => true]);
+    }
 
 
 
 
     public function forward(Request $request, Task $task)
-{
-    $request->validate([
-        'department_id'  => 'nullable|exists:departments,id',
-        'user_id'        => 'nullable|exists:users,id',
-        'follow_up_date' => 'required|date',
-    ]);
-
-    if (!$request->department_id && !$request->user_id) {
-        return response()->json([
-            'message' => 'Select either a department or a user'
-        ], 422);
-    }
-
-    DB::transaction(function () use ($request, $task) {
-
-        if ($request->department_id) {
-
-            $department = Departments::findOrFail($request->department_id);
-
-            TaskForward::updateOrCreate(
-                [
-                    'task_id'       => $task->id,
-                    'department_id' => $department->id,
-                ],
-                [
-                    'user_id'        => null,
-                    'forwarded_by'   => auth()->id(),
-                    'follow_up_date' => $request->follow_up_date,
-                ]
-            );
-
-            TaskActivity::create([
-                'task_id'  => $task->id,
-                'actor_id' => auth()->id(),
-                'message'  =>
-                    "Task forwarded to department\n" .
-                    "Department: {$department->name}\n" .
-                    "Follow-up date: " .
-                    \Carbon\Carbon::parse($request->follow_up_date)->format('d M Y'),
-            ]);
-        }
-
-        if ($request->user_id) {
-
-            $user = User::findOrFail($request->user_id);
-
-            TaskForward::updateOrCreate(
-                [
-                    'task_id' => $task->id,
-                    'user_id' => $user->id,
-                ],
-                [
-                    'department_id' => null,
-                    'forwarded_by'  => auth()->id(),
-                    'follow_up_date'=> $request->follow_up_date,
-                ]
-            );
-
-            TaskActivity::create([
-                'task_id'  => $task->id,
-                'actor_id' => auth()->id(),
-                'message'  =>
-                    "Task forwarded to user\n" .
-                    "User: {$user->name}\n" .
-                    "Follow-up date: " .
-                    \Carbon\Carbon::parse($request->follow_up_date)->format('d M Y'),
-            ]);
-        }
-    });
-
-    return response()->json(['success' => true]);
-}
-
-
-
-  
- public function deleteForward(TaskForward $forward)
-{
-    $activity = DB::transaction(function () use ($forward) {
-
-        if ($forward->department) {
-            $target = "Department: {$forward->department->name}";
-        } elseif ($forward->user) {
-            $target = "User: {$forward->user->name}";
-        } else {
-            $target = "Unknown target";
-        }
-
-        $activity = TaskActivity::create([
-            'task_id'  => $forward->task_id,
-            'actor_id' => auth()->id(),
-            'message'  => "Forward removed\n{$target}",
+    {
+        $request->validate([
+            'department_id' => 'nullable|exists:departments,id',
+            'user_id' => 'nullable|exists:users,id',
+            'follow_up_date' => 'required|date',
         ]);
 
-        $forward->delete();
+        if (!$request->department_id && !$request->user_id) {
+            return response()->json([
+                'message' => 'Select either a department or a user'
+            ], 422);
+        }
 
-        return $activity->load('actor:id,name');
-    });
+        DB::transaction(function () use ($request, $task) {
 
-    return response()->json([
-        'success'  => true,
-        'activity' => [
-            'id'      => $activity->id,
-            'user'    => $activity->actor->name,
-            'message' => nl2br(e($activity->message)),
-            'time'    => $activity->created_at->diffForHumans(),
-        ]
-    ]);
-}
+            if ($request->department_id) {
+
+                $department = Departments::findOrFail($request->department_id);
+
+                TaskForward::updateOrCreate(
+                    [
+                        'task_id' => $task->id,
+                        'department_id' => $department->id,
+                    ],
+                    [
+                        'user_id' => null,
+                        'forwarded_by' => auth()->id(),
+                        'follow_up_date' => $request->follow_up_date,
+                    ]
+                );
+
+                TaskActivity::create([
+                    'task_id' => $task->id,
+                    'actor_id' => auth()->id(),
+                    'message' =>
+                        "Task forwarded to department\n" .
+                        "Department: {$department->name}\n" .
+                        "Follow-up date: " .
+                        \Carbon\Carbon::parse($request->follow_up_date)->format('d M Y'),
+                ]);
+            }
+
+            if ($request->user_id) {
+
+                $user = User::findOrFail($request->user_id);
+
+                TaskForward::updateOrCreate(
+                    [
+                        'task_id' => $task->id,
+                        'user_id' => $user->id,
+                    ],
+                    [
+                        'department_id' => null,
+                        'forwarded_by' => auth()->id(),
+                        'follow_up_date' => $request->follow_up_date,
+                    ]
+                );
+
+                TaskActivity::create([
+                    'task_id' => $task->id,
+                    'actor_id' => auth()->id(),
+                    'message' =>
+                        "Task forwarded to user\n" .
+                        "User: {$user->name}\n" .
+                        "Follow-up date: " .
+                        \Carbon\Carbon::parse($request->follow_up_date)->format('d M Y'),
+                ]);
+            }
+        });
+
+        return response()->json(['success' => true]);
+    }
+
+
+
+
+    public function deleteForward(TaskForward $forward)
+    {
+        $activity = DB::transaction(function () use ($forward) {
+
+            if ($forward->department) {
+                $target = "Department: {$forward->department->name}";
+            } elseif ($forward->user) {
+                $target = "User: {$forward->user->name}";
+            } else {
+                $target = "Unknown target";
+            }
+
+            $activity = TaskActivity::create([
+                'task_id' => $forward->task_id,
+                'actor_id' => auth()->id(),
+                'message' => "Forward removed\n{$target}",
+            ]);
+
+            $forward->delete();
+
+            return $activity->load('actor:id,name');
+        });
+
+        return response()->json([
+            'success' => true,
+            'activity' => [
+                'id' => $activity->id,
+                'user' => $activity->actor->name,
+                'message' => nl2br(e($activity->message)),
+                'time' => $activity->created_at->diffForHumans(),
+            ]
+        ]);
+    }
 
 
 
@@ -560,12 +557,10 @@ class TaskController extends Controller
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            // 'task_status_id' => 'required|exists:task_statuses,id',
-            // 'task_priority_id' => 'required|exists:task_priorities,id',
             'due_at' => 'nullable|date',
         ]);
 
-        //  HARD DUPLICATE PROTECTION
+        // Prevent duplicate sub-task for same user & task
         $exists = TaskSubTask::where('task_id', $task->id)
             ->where('title', $data['title'])
             ->where('task_owner_id', auth()->id())
@@ -578,26 +573,23 @@ class TaskController extends Controller
             ], 422);
         }
 
-        $subtask = DB::transaction(function () use ($data, $task) {
+        $subtask = DB::transaction(function () use ($task, $data) {
 
             $subtask = TaskSubTask::create([
                 'task_id' => $task->id,
                 'title' => $data['title'],
                 'description' => $data['description'] ?? null,
-                // 'task_status_id' => $data['task_status_id'],
-                // 'task_priority_id' => $data['task_priority_id'],
                 'task_owner_id' => auth()->id(),
                 'due_at' => $data['due_at'] ?? null,
             ]);
 
-            //  ACTIVITY MESSAGE
             TaskActivity::create([
                 'task_id' => $task->id,
                 'sub_task_id' => $subtask->id,
                 'actor_id' => auth()->id(),
                 'task_owner_id' => $task->task_owner_id,
                 'message' =>
-                "Sub-task created\n" .
+                    "Sub-task created\n" .
                     "Title: {$subtask->title}\n" .
                     "Description: " . ($subtask->description ?: '—'),
             ]);
@@ -605,11 +597,23 @@ class TaskController extends Controller
             return $subtask;
         });
 
+
         return response()->json([
             'success' => true,
-            'data' => $subtask->load('status', 'priority', 'owner'),
+            'data' => [
+                'id' => $subtask->id,
+                'title' => $subtask->title,
+                'description' => $subtask->description,
+                'due_at' => optional($subtask->due_at)->format('d M Y'),
+                'due_raw' => optional($subtask->due_at)->format('Y-m-d'),
+                'owner' => [
+                    'name' => $subtask->owner->name ?? '—'
+                ]
+            ]
         ]);
     }
+
+
 
 
 
@@ -618,25 +622,42 @@ class TaskController extends Controller
         $data = $request->validate([
             'title' => 'required|string|max:255',
             'description' => 'nullable|string',
-            // 'task_status_id' => 'required|exists:task_statuses,id',
-            // 'task_priority_id' => 'required|exists:task_priorities,id',
             'due_at' => 'nullable|date',
         ]);
 
         DB::transaction(function () use ($subtask, $data) {
 
-            $subtask->update($data);
+            $subtask->update([
+                'title' => $data['title'],
+                'description' => $data['description'] ?? null,
+                'due_at' => $data['due_at'] ?? null,
+            ]);
 
             TaskActivity::create([
                 'task_id' => $subtask->task_id,
                 'sub_task_id' => $subtask->id,
                 'actor_id' => auth()->id(),
-                'message' => "Sub-task updated: {$subtask->title}",
+                'message' => "Sub-task updated\nTitle: {$subtask->title}",
             ]);
         });
 
-        return response()->json(['success' => true]);
+
+        return response()->json([
+            'success' => true,
+            'data' => [
+                'id' => $subtask->id,
+                'title' => $subtask->title,
+                'description' => $subtask->description,
+                'due_at' => optional($subtask->due_at)->format('d M Y'),
+                'due_raw' => optional($subtask->due_at)->format('Y-m-d'),
+                'owner' => [
+                    'name' => $subtask->owner->name ?? '—'
+                ]
+            ]
+        ]);
     }
+
+
 
 
     public function changeSubTaskStatus(Request $request, TaskSubTask $subtask)
@@ -672,11 +693,11 @@ class TaskController extends Controller
         DB::transaction(function () use ($subtask) {
 
             TaskActivity::create([
-                'task_id'       => $subtask->task_id,
-                'sub_task_id'   => $subtask->id,
-                'actor_id'      => auth()->id(),
+                'task_id' => $subtask->task_id,
+                'sub_task_id' => $subtask->id,
+                'actor_id' => auth()->id(),
                 'task_owner_id' => $subtask->task->task_owner_id,
-                'message'       => "Sub-task permanently deleted",
+                'message' => "Sub-task permanently deleted",
             ]);
 
             //  PERMANENT DELETE
@@ -767,11 +788,11 @@ class TaskController extends Controller
             ]);
 
             TaskActivity::create([
-                'task_id'       => $task->id,
-                'actor_id'      => auth()->id(),
+                'task_id' => $task->id,
+                'actor_id' => auth()->id(),
                 'task_owner_id' => $task->task_owner_id,
-                'message'       =>
-                "Status changed\n" .
+                'message' =>
+                    "Status changed\n" .
                     "From: {$oldStatus->name}\n" .
                     "To: {$newStatus->name}",
             ]);
@@ -801,11 +822,11 @@ class TaskController extends Controller
             ]);
 
             TaskActivity::create([
-                'task_id'       => $task->id,
-                'actor_id'      => auth()->id(),
+                'task_id' => $task->id,
+                'actor_id' => auth()->id(),
                 'task_owner_id' => $task->task_owner_id,
-                'message'       =>
-                "Priority changed\n" .
+                'message' =>
+                    "Priority changed\n" .
                     "From: {$oldPriority->name}\n" .
                     "To: {$newPriority->name}",
             ]);
@@ -816,23 +837,23 @@ class TaskController extends Controller
 
 
     public function removeAssignee(Task $task, User $user)
-{
-    DB::transaction(function () use ($task, $user) {
+    {
+        DB::transaction(function () use ($task, $user) {
 
-        TaskRelation::where([
-            'task_id'       => $task->id,
-            'related_id'    => $user->id,
-            'relation_type' => 'assignee',
-        ])->delete();
+            TaskRelation::where([
+                'task_id' => $task->id,
+                'related_id' => $user->id,
+                'relation_type' => 'assignee',
+            ])->delete();
 
-        TaskActivity::create([
-            'task_id'  => $task->id,
-            'actor_id' => auth()->id(),
-            'message'  => "Removed assigned user:\n{$user->name}",
-        ]);
-    });
+            TaskActivity::create([
+                'task_id' => $task->id,
+                'actor_id' => auth()->id(),
+                'message' => "Removed assigned user:\n{$user->name}",
+            ]);
+        });
 
-    return response()->json(['success' => true]);
-}
+        return response()->json(['success' => true]);
+    }
 
 }

@@ -804,6 +804,8 @@
             width: 100%;
         }
     }
+
+    
 </style>
 
 {{-- SCRIPTS --}}

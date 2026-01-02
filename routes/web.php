@@ -114,7 +114,7 @@ Route::middleware(['auth', 'verified', 'check_url_access'])->group(function () {
 
 
    Route::post('/tasks/{task}/status-inline', [TaskController::class, 'updateStatusInline']);
-Route::post('/tasks/{task}/priority-inline', [TaskController::class, 'updatePriorityInline']);
+   Route::post('/tasks/{task}/priority-inline', [TaskController::class, 'updatePriorityInline']);
 
 
 
@@ -150,10 +150,7 @@ Route::post('/tasks/{task}/priority-inline', [TaskController::class, 'updatePrio
 
    Route::delete('/task-attachments/{id}', [TaskController::class, 'deleteAttachment'])->name('tasks.attachments.delete');
 
-Route::delete(
-    '/tasks/{task}/assignees/{user}',
-    [TaskController::class, 'removeAssignee']
-);
+   Route::delete('/tasks/{task}/assignees/{user}', [TaskController::class, 'removeAssignee']);
 
 
 
