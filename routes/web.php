@@ -13,6 +13,8 @@ use App\Http\Controllers\PaymentController;
 use App\Http\Controllers\StudentController;
 use App\Http\Controllers\TaxRatesController;
 use App\Http\Controllers\TaskController;
+use App\Http\Controllers\StudentInteractionController;
+
 use App\Models\Students;
 use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\Auth;
@@ -114,7 +116,7 @@ Route::middleware(['auth', 'verified', 'check_url_access'])->group(function () {
 
 
    Route::post('/tasks/{task}/status-inline', [TaskController::class, 'updateStatusInline']);
-Route::post('/tasks/{task}/priority-inline', [TaskController::class, 'updatePriorityInline']);
+   Route::post('/tasks/{task}/priority-inline', [TaskController::class, 'updatePriorityInline']);
 
 
 
@@ -150,16 +152,25 @@ Route::post('/tasks/{task}/priority-inline', [TaskController::class, 'updatePrio
 
    Route::delete('/task-attachments/{id}', [TaskController::class, 'deleteAttachment'])->name('tasks.attachments.delete');
 
-Route::delete(
-    '/tasks/{task}/assignees/{user}',
-    [TaskController::class, 'removeAssignee']
-);
+   Route::delete('/tasks/{task}/assignees/{user}', [TaskController::class, 'removeAssignee']);
 
 
 
+   /*
+|--------------------------------------------------------------------------
+| STUDENT INTERACTIONS
+|--------------------------------------------------------------------------
+| 
+*/
 
 
-});
+   
+   Route::get('student-interactions/view', [StudentInteractionController::class, 'view'])->name('student_interactions.view');
+   Route::get('student-interactions/create', [StudentInteractionController::class, 'create'])->name('student-interactions.create');
+   Route::get('student-interactions/select-students', [StudentInteractionController::class, 'selectStudentsModal'])->name('student-interactions.select-students');
+   Route::get('student-interactions/load-students-by-batch', [StudentInteractionController::class, 'loadStudentsByBatch'])->name('student-interactions.load-students-by-batch');
+
+
 
 Route::post('/load_cities', [LocationController::class, 'load_cities'])->name('load_cities');
 Route::post('/load_university', [LocationController::class, 'load_university'])->name('load_university');
@@ -178,3 +189,4 @@ Route::post('/load_payment_method', [PaymentController::class, 'load_payment_met
 Route::post('/load_promo_codes', [PaymentController::class, 'load_promo_codes'])->name('load_promo_codes');
 Route::post('/load_card_types', [PaymentController::class, 'load_card_types'])->name('load_card_types');
 Route::post('/load_banks', [PaymentController::class, 'load_banks'])->name('load_banks');
+});

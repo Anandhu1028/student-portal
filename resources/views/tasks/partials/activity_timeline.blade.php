@@ -7,62 +7,58 @@
 
     @forelse($activities as $activity)
 
-    @php
-    $actorName = optional($activity->actor)->name ?? 'System';
-    $avatar = strtoupper(mb_substr($actorName, 0, 1));
-    @endphp
+        @php
+            $actorName = optional($activity->actor)->name ?? 'System';
+            $avatar = strtoupper(mb_substr($actorName, 0, 1));
+        @endphp
 
-    <li class="activity-item d-flex gap-3 mb-3">
+        <li class="activity-item d-flex gap-3 mb-3">
 
-        {{-- AVATAR --}}
-        <div class="activity-avatar">
-            {{ $avatar }}
-        </div>
-
-        {{-- CONTENT --}}
-        <div class="flex-grow-1">
-
-            {{-- HEADER --}}
-            <div class="d-flex justify-content-between align-items-start">
-                <strong class="activity-user">
-                    {{ $actorName }}
-                </strong>
-
-                <small class="activity-time">
-                    {{ $activity->created_at->diffForHumans() }}
-                </small>
+            {{-- AVATAR --}}
+            <div class="activity-avatar">
+                {{ $avatar }}
             </div>
 
-            {{-- MESSAGE --}}
-            <div class="activity-message mt-1">
-                {!! nl2br(e(trim($activity->message))) !!}
+            {{-- CONTENT --}}
+            <div class="flex-grow-1">
+
+                {{-- HEADER --}}
+                <div class="d-flex justify-content-between align-items-start">
+                    <strong class="activity-user">
+                        {{ $actorName }}
+                    </strong>
+
+                    <small class="activity-time">
+                        {{ $activity->created_at->diffForHumans() }}
+                    </small>
+                </div>
+
+                {{-- MESSAGE --}}
+                <div class="activity-message mt-1">
+                    {!! nl2br(e(trim($activity->message))) !!}
+                </div>
+
+                {{-- ATTACHMENTS --}}
+                @if($activity->attachments->count())
+                    <div class="activity-attachments mt-2 d-flex flex-wrap gap-2">
+                        @foreach($activity->attachments as $file)
+                            <a href="{{ asset('storage/' . $file->file_path) }}" target="_blank" class="activity-attachment"
+                                title="{{ $file->original_name }}">
+
+                                <img src="{{ asset('storage/' . $file->file_path) }}" alt="attachment" loading="lazy">
+                            </a>
+                        @endforeach
+                    </div>
+                @endif
+
             </div>
 
-            {{-- ATTACHMENTS --}}
-            @if($activity->attachments->count())
-            <div class="activity-attachments mt-2 d-flex flex-wrap gap-2">
-                @foreach($activity->attachments as $file)
-                <a href="{{ asset('storage/'.$file->file_path) }}"
-                    target="_blank"
-                    class="activity-attachment"
-                    title="{{ $file->original_name }}">
-
-                    <img src="{{ asset('storage/'.$file->file_path) }}"
-                        alt="attachment"
-                        loading="lazy">
-                </a>
-                @endforeach
-            </div>
-            @endif
-
-        </div>
-
-    </li>
+        </li>
 
     @empty
-    <li class="text-center text-muted py-3">
-        No activity yet
-    </li>
+        <li class="text-center text-muted py-3">
+            No activity yet
+        </li>
     @endforelse
 
 </ul>
@@ -123,5 +119,4 @@
     /* Attachments */
     /* .activity-attachments {
         margin */
-        
 </style>

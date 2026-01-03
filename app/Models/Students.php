@@ -113,4 +113,19 @@ class Students extends Model
    {
       return $this->belongsTo(CourseInstallments::class, 'student_id');
    }
+
+   public function university()
+   {
+      return $this->belongsTo(Universities::class, 'university_id');
+   }
+
+   public function courseBatchTypes()
+   {
+      return $this->belongsToMany(
+         CourseBatchTypes::class,
+         'student_course_batch_types',
+         'student_id',
+         'course_batch_type_id'
+      );
+   }
 }

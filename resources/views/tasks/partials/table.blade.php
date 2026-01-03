@@ -19,105 +19,91 @@
 
     <tbody>
         @forelse($tasks as $task)
-        <tr data-task-row="{{ $task->id }}">
+            <tr data-task-row="{{ $task->id }}">
 
-            {{-- TITLE --}}
-            <td class="task-title-cell">
-                <span class="task-title openTaskEdit"
-                    role="button"
-                    data-id="{{ $task->id }}"
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="top"
-                    title="{{ $task->title }}">
-                    {{ \Illuminate\Support\Str::limit($task->title, 30) }}
-                </span>
-            </td>
+                {{-- TITLE --}}
+                <td class="task-title-cell">
+                    <span class="task-title openTaskEdit" role="button" data-id="{{ $task->id }}" data-bs-toggle="tooltip"
+                        data-bs-placement="top" title="{{ $task->title }}">
+                        {{ \Illuminate\Support\Str::limit($task->title, 30) }}
+                    </span>
+                </td>
 
-            {{-- DESCRIPTION --}}
-            <td class="task-desc-cell">
-                @if($task->description)
-                <span class="task-desc"
-                    data-bs-toggle="tooltip"
-                    data-bs-placement="top"
-                    title="{{ $task->description }}">
-                    {{ \Illuminate\Support\Str::limit($task->description, 40) }}
-                </span>
-                @else
-                <span class="text-muted">—</span>
-                @endif
-            </td>
+                {{-- DESCRIPTION --}}
+                <td class="task-desc-cell">
+                    @if($task->description)
+                        <span class="task-desc" data-bs-toggle="tooltip" data-bs-placement="top"
+                            title="{{ $task->description }}">
+                            {{ \Illuminate\Support\Str::limit($task->description, 40) }}
+                        </span>
+                    @else
+                        <span class="text-muted">—</span>
+                    @endif
+                </td>
 
-            {{-- FILES --}}
-            <td class="text-center">
-                @if($task->attachments->count())
-                <span class="badge bg-primary viewTaskFiles"
-                    role="button"
-                    data-bs-toggle="tooltip"
-                    title="View attachments"
-                    data-files='@json(
-                $task->attachments->map(fn($f) => [
-                    "url"  => url("storage/".$f->file_path),
-                    "name" => $f->original_name
-                ])
-              )'>
-                    {{ $task->attachments->count() }}
-                </span>
-                @else
-                <span class="text-muted">—</span>
-                @endif
-            </td>
+                {{-- FILES --}}
+                <td class="text-center">
+                    @if($task->attachments->count())
+                        <span class="badge bg-primary viewTaskFiles" role="button" data-bs-toggle="tooltip"
+                            title="View attachments" data-files='@json(
+                                $task->attachments->map(fn($f) => [
+                                    "url" => url("storage/" . $f->file_path),
+                                    "name" => $f->original_name
+                                ])
+                            )'>
+                            {{ $task->attachments->count() }}
+                        </span>
+                    @else
+                        <span class="text-muted">—</span>
+                    @endif
+                </td>
 
 
 
-            <td>{{ $task->status->name }}</td>
-            <td>{{ $task->priority->name }}</td>
-            <td>{{ $task->owner->name }}</td>
+                <td>{{ $task->status->name }}</td>
+                <td>{{ $task->priority->name }}</td>
+                <td>{{ $task->owner->name }}</td>
 
-            {{-- ASSIGNED USERS --}}
-            <td>
-                @php $names = $task->assignees->pluck('name')->toArray(); @endphp
-                <span class="assigned-users"
-                    data-bs-toggle="tooltip"
-                    title="{{ implode(', ', $names) }}">
-                    {{ collect($names)->take(2)->join(', ') }}
-                    @if(count($names) > 2) … @endif
-                </span>
-            </td>
+                {{-- ASSIGNED USERS --}}
+                <td>
+                    @php $names = $task->assignees->pluck('name')->toArray(); @endphp
+                    <span class="assigned-users" data-bs-toggle="tooltip" title="{{ implode(', ', $names) }}">
+                        {{ collect($names)->take(2)->join(', ') }}
+                        @if(count($names) > 2) … @endif
+                    </span>
+                </td>
 
-            {{-- DUE DATE --}}
-            <td>
-                @if($task->due_at)
-                {{ \Carbon\Carbon::parse($task->due_at)->format('d M Y') }}
-                @else
-                <span class="text-muted">—</span>
-                @endif
-            </td>
+                {{-- DUE DATE --}}
+                <td>
+                    @if($task->due_at)
+                        {{ \Carbon\Carbon::parse($task->due_at)->format('d M Y') }}
+                    @else
+                        <span class="text-muted">—</span>
+                    @endif
+                </td>
 
-            {{-- ACTIONS --}}
-            <td class="text-nowrap">
-                <button class="btn btn-sm btn-outline-primary openTaskView"
-                    data-id="{{ $task->id }}">
-                    View
-                </button>
+                {{-- ACTIONS --}}
+                <td class="text-nowrap">
+                    <button class="btn btn-sm btn-outline-primary openTaskView" data-id="{{ $task->id }}">
+                        View
+                    </button>
 
-                <button class="btn btn-sm btn-outline-success forwardTask"
-                    data-id="{{ $task->id }}">
-                    Forward
-                </button>
+                    <button class="btn btn-sm btn-outline-success forwardTask" data-id="{{ $task->id }}">
+                        Forward
+                    </button>
 
-                <button class="btn btn-sm btn-outline-danger deleteTask"
-                    data-id="{{ $task->id }}">
-                    Delete
-                </button>
-            </td>
+                    <button class="btn btn-sm btn-outline-danger deleteTask" data-id="{{ $task->id }}">
+                        Delete
+                    </button>
+                </td>
 
-        </tr>
+            </tr>
         @empty
-        <tr>
-            <td colspan="9" class="text-center text-muted">
-                No tasks found
-            </td>
-        </tr>
+            <tr>
+                <td colspan="9" class="text-center text-muted">
+                    No tasks found
+                </td>
+            </tr>
         @endforelse
     </tbody>
 </table>
@@ -236,25 +222,25 @@
     }
 </style>
 <script>
-/* =========================================================
-   VIEW TASK FILES (MODAL PREVIEW)
-========================================================= */
-$(document).off('click', '.viewTaskFiles');
-$(document).on('click', '.viewTaskFiles', function () {
+    /* =========================================================
+       VIEW TASK FILES (MODAL PREVIEW)
+    ========================================================= */
+    $(document).off('click', '.viewTaskFiles');
+    $(document).on('click', '.viewTaskFiles', function () {
 
-    const files = $(this).data('files');
-    const container = $('#taskFilesContainer');
-    container.empty();
+        const files = $(this).data('files');
+        const container = $('#taskFilesContainer');
+        container.empty();
 
-    if (!Array.isArray(files) || files.length === 0) {
-        container.html('<p class="text-muted text-center">No attachments found</p>');
-        return;
-    }
+        if (!Array.isArray(files) || files.length === 0) {
+            container.html('<p class="text-muted text-center">No attachments found</p>');
+            return;
+        }
 
-    files.forEach(file => {
-        if (!file.url) return;
+        files.forEach(file => {
+            if (!file.url) return;
 
-        container.append(`
+            container.append(`
             <div class="col-md-4">
                 <div class="border rounded p-2 text-center h-100">
                     <a href="${file.url}" target="_blank">
@@ -269,170 +255,170 @@ $(document).on('click', '.viewTaskFiles', function () {
                 </div>
             </div>
         `);
-    });
+        });
 
-    bootstrap.Modal
-        .getOrCreateInstance(document.getElementById('taskFilesModal'))
-        .show();
-});
-
-
-/* =========================================================
-   BOOTSTRAP TOOLTIPS
-========================================================= */
-function initTooltips(context = document) {
-    context.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
-        bootstrap.Tooltip.getOrCreateInstance(el);
-    });
-}
-
-initTooltips();
-$(document).on('ajaxTableReloaded', () => initTooltips(document));
-
-
-/* =========================================================
-   RELOAD TASK TABLE (CORE FUNCTION)
-========================================================= */
-function reloadTaskTable() {
-
-    preloader.load();
-
-    $.get("{{ route('tasks.list') }}", {
-        filter: 1,
-        status: $('[data-name="status"]').val() || '',
-        priority: $('[data-name="priority"]').val() || '',
-        owner: $('[data-name="owner"]').val() || '',
-        search: $('.taskSearch').val() || ''
-    })
-    .done(html => {
-        $('.task-table-wrapper').html(html);
-        $(document).trigger('ajaxTableReloaded');
-    })
-    .fail(() => showAlert('Failed to reload task list', 'error'))
-    .always(() => preloader.stop());
-}
-
-
-/* =========================================================
-   FORWARD TASK
-========================================================= */
-$(document).off('click', '.forwardTask');
-$(document).on('click', '.forwardTask', function () {
-
-    $('#forwardTaskId').val($(this).data('id'));
-    $('#forwardTaskForm')[0].reset();
-
-    bootstrap.Modal
-        .getOrCreateInstance(document.getElementById('forwardTaskModal'))
-        .show();
-});
-
-$(document).off('submit', '#forwardTaskForm');
-$(document).on('submit', '#forwardTaskForm', function (e) {
-
-    e.preventDefault();
-
-    const form = this;
-    const taskId = $('#forwardTaskId').val();
-
-    if ($(form).data('loading')) return;
-    $(form).data('loading', true);
-
-    preloader.load();
-
-    $.ajax({
-        url: `/tasks/${taskId}/forward`,
-        type: 'POST',
-        headers: {
-            'X-CSRF-TOKEN': "{{ csrf_token() }}"
-        },
-        data: new FormData(form),
-        processData: false,
-        contentType: false
-    })
-    .done(() => {
         bootstrap.Modal
-            .getInstance(document.getElementById('forwardTaskModal'))
-            .hide();
-
-        showAlert('Task forwarded successfully', 'success');
-
-        // 🔥 instant UI update
-        reloadTaskTable();
-    })
-    .fail(xhr => {
-        showAlert(xhr.responseJSON?.message || 'Forward failed', 'error');
-    })
-    .always(() => {
-        preloader.stop();
-        $(form).data('loading', false);
+            .getOrCreateInstance(document.getElementById('taskFilesModal'))
+            .show();
     });
-});
 
 
-/* =========================================================
-   EDIT TASK
-========================================================= */
-$(document).off('click', '.openTaskEdit');
-$(document).on('click', '.openTaskEdit', function (e) {
+    /* =========================================================
+       BOOTSTRAP TOOLTIPS
+    ========================================================= */
+    function initTooltips(context = document) {
+        context.querySelectorAll('[data-bs-toggle="tooltip"]').forEach(el => {
+            bootstrap.Tooltip.getOrCreateInstance(el);
+        });
+    }
 
-    e.preventDefault();
-    const id = $(this).data('id');
-    if (!id) return;
+    initTooltips();
+    $(document).on('ajaxTableReloaded', () => initTooltips(document));
 
-    preloader.load();
 
-    $.get(`{{ route('tasks.create') }}?id=${id}`)
-        .done(html => {
-            const oc = bootstrap.Offcanvas
-                .getOrCreateInstance(document.getElementById('offcanvasCustom'));
+    /* =========================================================
+       RELOAD TASK TABLE (CORE FUNCTION)
+    ========================================================= */
+    function reloadTaskTable() {
 
-            $('#offcanvasCustomHead').html('Edit Task');
-            $('#offcanvasCustomBody').html(html);
-            oc.show();
+        preloader.load();
 
-            setTimeout(() => {
-                $('.selectpicker').selectpicker('render').selectpicker('refresh');
-            }, 150);
+        $.get("{{ route('tasks.list') }}", {
+            filter: 1,
+            status: $('[data-name="status"]').val() || '',
+            priority: $('[data-name="priority"]').val() || '',
+            owner: $('[data-name="owner"]').val() || '',
+            search: $('.taskSearch').val() || ''
         })
-        .fail(() => showAlert('Failed to load task', 'error'))
-        .always(() => preloader.stop());
-});
+            .done(html => {
+                $('.task-table-wrapper').html(html);
+                $(document).trigger('ajaxTableReloaded');
+            })
+            .fail(() => showAlert('Failed to reload task list', 'error'))
+            .always(() => preloader.stop());
+    }
 
 
-/* =========================================================
-   VIEW TASK DETAILS
-========================================================= */
-$(document).off('click', '.openTaskView');
-$(document).on('click', '.openTaskView', function () {
+    /* =========================================================
+       FORWARD TASK
+    ========================================================= */
+    $(document).off('click', '.forwardTask');
+    $(document).on('click', '.forwardTask', function () {
 
-    const id = $(this).data('id');
-    preloader.load();
+        $('#forwardTaskId').val($(this).data('id'));
+        $('#forwardTaskForm')[0].reset();
 
-    $.get(`{{ url('/tasks') }}/${id}?view=1`)
-        .done(html => {
-            const oc = bootstrap.Offcanvas
-                .getOrCreateInstance(document.getElementById('offcanvasCustom'));
+        bootstrap.Modal
+            .getOrCreateInstance(document.getElementById('forwardTaskModal'))
+            .show();
+    });
 
-            $('#offcanvasCustomHead').html('Task Details');
-            $('#offcanvasCustomBody').html(html);
-            oc.show();
+    $(document).off('submit', '#forwardTaskForm');
+    $(document).on('submit', '#forwardTaskForm', function (e) {
+
+        e.preventDefault();
+
+        const form = this;
+        const taskId = $('#forwardTaskId').val();
+
+        if ($(form).data('loading')) return;
+        $(form).data('loading', true);
+
+        preloader.load();
+
+        $.ajax({
+            url: `/tasks/${taskId}/forward`,
+            type: 'POST',
+            headers: {
+                'X-CSRF-TOKEN': "{{ csrf_token() }}"
+            },
+            data: new FormData(form),
+            processData: false,
+            contentType: false
         })
-        .fail(() => showAlert('Unable to load task', 'error'))
-        .always(() => preloader.stop());
-});
+            .done(() => {
+                bootstrap.Modal
+                    .getInstance(document.getElementById('forwardTaskModal'))
+                    .hide();
+
+                showAlert('Task forwarded successfully', 'success');
+
+                // 🔥 instant UI update
+                reloadTaskTable();
+            })
+            .fail(xhr => {
+                showAlert(xhr.responseJSON?.message || 'Forward failed', 'error');
+            })
+            .always(() => {
+                preloader.stop();
+                $(form).data('loading', false);
+            });
+    });
 
 
-/* =========================================================
-   DELETE TASK
-========================================================= */
-$(document).off('click', '.deleteTask');
-$(document).on('click', '.deleteTask', function () {
+    /* =========================================================
+       EDIT TASK
+    ========================================================= */
+    $(document).off('click', '.openTaskEdit');
+    $(document).on('click', '.openTaskEdit', function (e) {
 
-    const taskId = $(this).data('id');
-    $('#taskDeleteConfirm').remove();
+        e.preventDefault();
+        const id = $(this).data('id');
+        if (!id) return;
 
-    $('body').append(`
+        preloader.load();
+
+        $.get(`{{ route('tasks.create') }}?id=${id}`)
+            .done(html => {
+                const oc = bootstrap.Offcanvas
+                    .getOrCreateInstance(document.getElementById('offcanvasCustom'));
+
+                $('#offcanvasCustomHead').html('Edit Task');
+                $('#offcanvasCustomBody').html(html);
+                oc.show();
+
+                setTimeout(() => {
+                    $('.selectpicker').selectpicker('render').selectpicker('refresh');
+                }, 150);
+            })
+            .fail(() => showAlert('Failed to load task', 'error'))
+            .always(() => preloader.stop());
+    });
+
+
+    /* =========================================================
+       VIEW TASK DETAILS
+    ========================================================= */
+    $(document).off('click', '.openTaskView');
+    $(document).on('click', '.openTaskView', function () {
+
+        const id = $(this).data('id');
+        preloader.load();
+
+        $.get(`{{ url('/tasks') }}/${id}?view=1`)
+            .done(html => {
+                const oc = bootstrap.Offcanvas
+                    .getOrCreateInstance(document.getElementById('offcanvasCustom'));
+
+                $('#offcanvasCustomHead').html('Task Details');
+                $('#offcanvasCustomBody').html(html);
+                oc.show();
+            })
+            .fail(() => showAlert('Unable to load task', 'error'))
+            .always(() => preloader.stop());
+    });
+
+
+    /* =========================================================
+       DELETE TASK
+    ========================================================= */
+    $(document).off('click', '.deleteTask');
+    $(document).on('click', '.deleteTask', function () {
+
+        const taskId = $(this).data('id');
+        $('#taskDeleteConfirm').remove();
+
+        $('body').append(`
         <div class="modal fade" id="taskDeleteConfirm">
             <div class="modal-dialog modal-dialog-centered">
                 <div class="modal-content">
@@ -452,31 +438,31 @@ $(document).on('click', '.deleteTask', function () {
         </div>
     `);
 
-    const modal = bootstrap.Modal
-        .getOrCreateInstance(document.getElementById('taskDeleteConfirm'));
+        const modal = bootstrap.Modal
+            .getOrCreateInstance(document.getElementById('taskDeleteConfirm'));
 
-    modal.show();
+        modal.show();
 
-    $(document).one('click', '.confirmDeleteTask', function () {
+        $(document).one('click', '.confirmDeleteTask', function () {
 
-        preloader.load();
+            preloader.load();
 
-        $.post("{{ route('tasks.delete') }}", {
-            _token: "{{ csrf_token() }}",
-            id: taskId
-        })
-        .done(() => {
-            modal.hide();
-            $(`tr[data-task-row="${taskId}"]`).fadeOut(200, function () {
-                $(this).remove();
-            });
-            showAlert('Task deleted successfully', 'success');
-        })
-        .fail(() => showAlert('Delete failed', 'error'))
-        .always(() => {
-            preloader.stop();
-            $('#taskDeleteConfirm').remove();
+            $.post("{{ route('tasks.delete') }}", {
+                _token: "{{ csrf_token() }}",
+                id: taskId
+            })
+                .done(() => {
+                    modal.hide();
+                    $(`tr[data-task-row="${taskId}"]`).fadeOut(200, function () {
+                        $(this).remove();
+                    });
+                    showAlert('Task deleted successfully', 'success');
+                })
+                .fail(() => showAlert('Delete failed', 'error'))
+                .always(() => {
+                    preloader.stop();
+                    $('#taskDeleteConfirm').remove();
+                });
         });
     });
-});
 </script>
